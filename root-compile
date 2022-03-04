@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+      echo "No macro name passed!"
+#else
+      #echo "Compiling macro $1"
+fi
+
+# get filename and filename without suffix
+MACRO_FILEPATH=$1
+MACRO_FILENAME=$(basename "$MACRO_FILEPATH")
+MACRO_NAME="${MACRO_FILENAME%.*}"
+
+TMP_DIR=/tmp/root-compile/$MACRO_NAME
+#EXTRA_CXX_FLAGS="-g -lRooFit -lRooFitCore -lHistFactory -lRooStats -lRooFitHS3"
+EXTRA_CXX_FLAGS="-fplugin=/usr/lib/clad.so -g -lRooFit -lRooFitCore -lHistFactory -lRooStats -lRooFitHS3"
+
+#COMPILER=g++
+COMPILER=clang++
+
+mkdir -p $TMP_DIR
+
+# compile macro library
+$COMPILER $(root-config --cflags --libs) -o $TMP_DIR/$MACRO_NAME.o -c $MACRO_FILEPATH $EXTRA_CXX_FLAGS -fPIC
+$COMPILER -shared -o $TMP_DIR/lib$MACRO_NAME.so $TMP_DIR/$MACRO_NAME.o
+ar rvs $TMP_DIR/$MACRO_NAME.a $TMP_DIR/$MACRO_NAME.o &>/dev/null
+
+# create main.cpp
+echo "void $MACRO_NAME();
+
+int main() {
+    $MACRO_NAME();
+}" > $TMP_DIR/main.cpp
+
+# compile binary
+#g++ $(root-config --cflags) -o $MACRO_NAME $TMP_DIR/main.cpp $TMP_DIR/$MACRO_NAME.a $EXTRA_CXX_FLAGS $(root-config --libs)
+#g++ $(root-config --cflags --libs) -o $MACRO_NAME $TMP_DIR/main.cpp -L$TMP_DIR -l$MACRO_NAME $EXTRA_CXX_FLAGS
+$COMPILER $(root-config --cflags --libs) -o $MACRO_NAME $TMP_DIR/main.cpp $TMP_DIR/$MACRO_NAME.a $EXTRA_CXX_FLAGS
+
+rm -rf $TMP_DIR
