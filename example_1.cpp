@@ -161,7 +161,7 @@ void example_1() {
   RooMinimizer m(ad_nll, RooMinimizer::FcnMode::gradient);
   //m.setVerbose(10);
   //m.setPrintLevel(3);
-  m.setStrategy(0);
+  //m.setStrategy(0);
   m.minimize("Minuit2");
   m.save()->Print();
 
@@ -170,10 +170,22 @@ void example_1() {
   rf_mu.setError(0.0);
   rf_sigma.setError(0.0);
 
-  RooMinimizer m2(ad_nll, RooMinimizer::FcnMode::clad);
+  RooMinimizer m2(ad_nll, RooMinimizer::FcnMode::clad_1);
   //m2.setVerbose(10);
   //m2.setPrintLevel(3);
-  m2.setStrategy(0);
+  //m2.setStrategy(0);
   m2.minimize("Minuit2");
   m2.save()->Print();
+
+  rf_mu.setVal(mu_val);
+  rf_sigma.setVal(sigma_val);
+  rf_mu.setError(0.0);
+  rf_sigma.setError(0.0);
+
+  RooMinimizer m3(ad_nll, RooMinimizer::FcnMode::clad_2);
+  //m2.setVerbose(10);
+  //m2.setPrintLevel(3);
+  //m2.setStrategy(0);
+  m3.minimize("Minuit2");
+  m3.save()->Print();
 }

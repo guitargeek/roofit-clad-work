@@ -9,7 +9,7 @@ You can't run these macros in the ROOT interpreter.
 
 ## Interfacing the analytical gradient with Minuit2 via the RooMinimizer
 
-A first prototype for the plumming between RooFit and Minuit2 is implemented in [this `RooCladMinimizerFcn` branch](https://github.com/guitargeek/root/tree/RooCladMinimizerFcn_1).
+A first prototype for the plumming between RooFit and Minuit2 is implemented in [this `roofit_ad_dev` branch](https://github.com/guitargeek/root/tree/roofit_ad_dev).
 This implementation reuses much of the `RooGradMinimizerFcn` logic, implementing `IMultiGradFunction::DoDerivative` where the derivatives are filled from cached gradient results.
 You can test the `RooCladMinimizerFcn` with the [example_1.cpp](./example_1.cpp) code, which implements a complete Gaussian likelihood in one RooFit object that can also return the gradient.
 
