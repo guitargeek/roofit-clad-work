@@ -225,6 +225,7 @@ double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2,
  double mu0 = 0;
  double temp;
  for (int iB = 0; iB < 2; iB++) {
+   mu0 = 0;
    b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
    b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
    b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
@@ -237,6 +238,7 @@ double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2,
  double nllSum1 = 0;
  double mu1 = 0;
  for (int iB = 0; iB < 2; iB++) {
+   mu1 = 0;
    b4 = ExRooHistFunc::getBin(binBoundaries4, x[iB]);
    b5 = ExRooHistFunc::getBin(binBoundaries5, x[iB]);
    b6 = ExRooHistFunc::getBin(binBoundaries6, x[iB]);
