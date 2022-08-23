@@ -87,57 +87,63 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace()
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
 
-using namespace std;
+std::string generateNLLCode()
+{
 
-contextManager ctx;
-ExRooRealVar X(ctx, "x", "{1.25, 1.75}", 2);
-ExRooConst B2Eps(ctx, 1);
-ExRooConst B1Eps(ctx, 1);
-ExRooRealVar NomLumi(ctx, "nominalLumi", "1");
-ExRooConst RandConst(ctx, 0.1);
-// ExRooRealVar AlphaSys(ctx, "alphaSys", "0");
-ExRooConst RandConst2(ctx, 1);
-// ExRooRealVar NomAlphaSys(ctx, "nomAlphaSys", "0");
-ExRooRealVar GammaB1(ctx, "gammaB1"); // Input
-ExRooRealVar NomGammaB1(ctx, "nomGammaB1", "400");
-ExRooRealVar GammaB2(ctx, "gammaB2");         // Input
-ExRooRealVar SigXOverM(ctx, "SigXsecOverSM"); // Input
-ExRooRealVar Lumi(ctx, "lumi");               // Input
-ExRooRealVar NomGammaB2(ctx, "nomGammaB2", "100");
-ExRooRealVar ChannelWeight(ctx, "cw", "1");
-ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
+   contextManager ctx;
 
-// Hist func part
-ExRooHistFunc Sig(ctx, &X, "sig", "{20, 10}", "{1, 1.5, 2}"), Bgk1(ctx, &X, "bgk1", "{100, 0}", "{1, 1.5, 2}"),
-   Bgk2(ctx, &X, "bgk2", "{0, 100}", "{1, 1.5, 2}");
-ExRooParamHistFunc ParamHist(ctx, &X, {&GammaB1, &GammaB2});
-ExRooProduct constr1(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi});
-ExRooProduct constr2(ctx, {&Lumi, &B1Eps});
-ExRooProduct constr3(ctx, {&Lumi, &B2Eps});
-ExRooProduct Bgk1Shape(ctx, {&Bgk1, &ParamHist}), Bgk2Shape(ctx, {&Bgk2, &ParamHist});
-ExRooRealSum SumHF(ctx, "mu", {&Sig, &Bgk1Shape, &Bgk2Shape}, {&constr1, &constr2, &constr3});
-ExRooProduct ProdHF(ctx, {&SumHF});
+   ExRooRealVar X(ctx, "x", "{1.25, 1.75}", 2);
+   ExRooConst B2Eps(ctx, 1);
+   ExRooConst B1Eps(ctx, 1);
+   ExRooRealVar NomLumi(ctx, "nominalLumi", "1");
+   ExRooConst RandConst(ctx, 0.1);
+   // ExRooRealVar AlphaSys(ctx, "alphaSys", "0");
+   ExRooConst RandConst2(ctx, 1);
+   // ExRooRealVar NomAlphaSys(ctx, "nomAlphaSys", "0");
+   ExRooRealVar GammaB1(ctx, "gammaB1"); // Input
+   ExRooRealVar NomGammaB1(ctx, "nomGammaB1", "400");
+   ExRooRealVar GammaB2(ctx, "gammaB2");         // Input
+   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM"); // Input
+   ExRooRealVar Lumi(ctx, "lumi");               // Input
+   ExRooRealVar NomGammaB2(ctx, "nomGammaB2", "100");
+   ExRooRealVar ChannelWeight(ctx, "cw", "1");
+   ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
 
-// NLL node
-ExRooNll2 Nll(ctx, &X, "2", &ProdHF, {122, 112});
+   // Hist func part
+   ExRooHistFunc Sig(ctx, &X, "sig", "{20, 10}", "{1, 1.5, 2}"), Bgk1(ctx, &X, "bgk1", "{100, 0}", "{1, 1.5, 2}"),
+      Bgk2(ctx, &X, "bgk2", "{0, 100}", "{1, 1.5, 2}");
+   ExRooParamHistFunc ParamHist(ctx, &X, {&GammaB1, &GammaB2});
+   ExRooProduct constr1(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi});
+   ExRooProduct constr2(ctx, {&Lumi, &B1Eps});
+   ExRooProduct constr3(ctx, {&Lumi, &B2Eps});
+   ExRooProduct Bgk1Shape(ctx, {&Bgk1, &ParamHist}), Bgk2Shape(ctx, {&Bgk2, &ParamHist});
+   ExRooRealSum SumHF(ctx, "mu", {&Sig, &Bgk1Shape, &Bgk2Shape}, {&constr1, &constr2, &constr3});
+   ExRooProduct ProdHF(ctx, {&SumHF});
 
-// Poisson B0 constraint
-ExRooProduct PoissProd1(ctx, {&NomGammaB1, &GammaB1});
-ExRooPoisson Poisson1(ctx, &NomGammaB1, &PoissProd1);
-// Poisson B1 constraint
-ExRooProduct PoissProd2(ctx, {&NomGammaB2, &GammaB2});
-ExRooPoisson Poisson2(ctx, &NomGammaB2, &PoissProd2);
-// Gaussian alpha constraint
-// ExRooGaussian GaussAlpha(ctx, &AlphaSys, &NomAlphaSys, &RandConst2);
-// Gaussian Lumi constraint
-ExRooGaussian GaussLumi(ctx, &Lumi, &NomLumi, &RandConst);
+   // NLL node
+   ExRooNll2 Nll(ctx, &X, "2", &ProdHF, {122, 112});
 
-// Constraint sum
-ExRooConstraintSum ConstrSum(ctx, {&Poisson1, &Poisson2, /* &GaussAlpha, */
-                                   &GaussLumi});
+   // Poisson B0 constraint
+   ExRooProduct PoissProd1(ctx, {&NomGammaB1, &GammaB1});
+   ExRooPoisson Poisson1(ctx, &NomGammaB1, &PoissProd1);
+   // Poisson B1 constraint
+   ExRooProduct PoissProd2(ctx, {&NomGammaB2, &GammaB2});
+   ExRooPoisson Poisson2(ctx, &NomGammaB2, &PoissProd2);
+   // Gaussian alpha constraint
+   // ExRooGaussian GaussAlpha(ctx, &AlphaSys, &NomAlphaSys, &RandConst2);
+   // Gaussian Lumi constraint
+   ExRooGaussian GaussLumi(ctx, &Lumi, &NomLumi, &RandConst);
 
-// Final root model node
-ExRooAddition Root(ctx, {&ConstrSum, &Nll});
+   // Constraint sum
+   ExRooConstraintSum ConstrSum(ctx, {&Poisson1, &Poisson2, /* &GaussAlpha, */
+                                      &GaussLumi});
+
+   // Final root model node
+   ExRooAddition Root(ctx, {&ConstrSum, &Nll});
+
+   std::string code = Root.getCode();
+   return "double nll(" + ctx.getParamList() + ") { \n" + code + " return " + Root.getResult() + ";\n}\n";
+}
 
 // Generated Code
 double nll(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2)
@@ -244,10 +250,8 @@ int main()
 
    gInterpreter->Declare("#pragma cling optimize(2)");
 
-   std::string code = Root.getCode();
-   std::cout << code << std::endl;
-   //   std::string func = "double nll(" + ctx.getParamList() + ") { \n" + code + " return " + Root.getResult() + ";
-   //   \n}\n"; std::cout << func.c_str();
+   //   std::string func = generateNLLCode();
+   //   std::cout << func.c_str();
 
    //   auto df = clad::gradient(nll);
    //   df.dump();
@@ -297,46 +301,66 @@ int main()
 
    auto *pdf = w->pdf("simPdf");
 
+   std::vector<std::string> paramNames{"Lumi", "SigXsecOverSM", "gamma_stat_channel1_bin_0",
+                                       "gamma_stat_channel1_bin_1"};
+
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
 
-   RooGradFuncWrapper wrapper(nll, nll_grad, *w,
-                              {"Lumi", "SigXsecOverSM", "gamma_stat_channel1_bin_0", "gamma_stat_channel1_bin_1"});
+   // Create the likelihood objects with RooFit and our generated code
+   std::unique_ptr<RooAbsReal> nllRooFit{pdf->createNLL(*w->data("obsData"), Constrain(*mc->GetNuisanceParameters()),
+                                                        GlobalObservables(*mc->GetGlobalObservables()))};
+   std::unique_ptr<RooAbsReal> nllCodeGen{new RooGradFuncWrapper(nll, nll_grad, *w, paramNames)};
 
-   {
-      // RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_2);
-      RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_1);
-      // RooMinimizer m(wrapper, RooMinimizer::FcnMode::classic);
-
-      m.minimize("");
+   // Create the minimizers for each configuration
+   auto setupMinimizer = [](RooMinimizer &m) {
       m.setVerbose(false);
       m.setPrintLevel(-1);
-      std::unique_ptr<RooFitResult> result{m.save()};
-      result->Print();
-   }
+   };
 
-   std::unique_ptr<RooAbsReal> nll_1{pdf->createNLL(*w->data("obsData"), Constrain(*mc->GetNuisanceParameters()),
-                                                    GlobalObservables(*mc->GetGlobalObservables()))};
-   RooMinimizer m(*nll_1, RooMinimizer::FcnMode::classic);
-
-   m.setVerbose(false);
-   m.setPrintLevel(-1);
+   RooMinimizer m1(*nllRooFit, RooMinimizer::FcnMode::classic);
+   setupMinimizer(m1);
+   RooMinimizer m2(*nllCodeGen, RooMinimizer::FcnMode::classic);
+   setupMinimizer(m2);
+   RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
+   setupMinimizer(m3);
+   RooMinimizer m4(*nllCodeGen, RooMinimizer::FcnMode::clad_2);
+   setupMinimizer(m4);
 
 #ifdef BENCH
+
+   std::vector<RooMinimizer *> minimizers{&m1, &m2, &m3, &m4};
+   std::size_t iMinimizer = state.range(0);
+
+   auto &m = *minimizers[iMinimizer];
+
+   //// For validation
+   // resetParameters();
+   // m.minimize("");
+   // std::unique_ptr<RooFitResult> result{m.save()};
+   // result->Print();
+
    for (auto _ : state) {
       resetParameters();
       m.minimize("");
    }
 #else
+   auto &m = m1;
    m.minimize("");
-#endif
-
    std::unique_ptr<RooFitResult> result{m.save()};
    result->Print();
+#endif
 }
 
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
-BENCHMARK(hf_example_01_sim)->Unit(unit);
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
 // Define our main.
 BENCHMARK_MAIN();
 #endif
