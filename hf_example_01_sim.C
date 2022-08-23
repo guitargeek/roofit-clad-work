@@ -20,6 +20,7 @@
 #include <clad/Differentiator/Differentiator.h>
 
 #include "include/RooSimClasses.h"
+#include "include/derivative.h"
 #include <string>
 #include <cmath>
 
@@ -146,47 +147,106 @@ std::string generateNLLCode()
 }
 
 // Generated Code
-double nll(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2)
-{
-   double nomGammaB1 = 400;
-   double nomGammaB2 = 100;
-   double nominalLumi = 1;
-   double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
-                        ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
-                        ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
-   double cnstSum = 0;
-   double x[2]{1.25, 1.75};
-   double sig[2]{20, 10};
-   double binBoundaries1[3]{1, 1.5, 2};
-   double bgk1[2]{100, 0};
-   double binBoundaries2[3]{1, 1.5, 2};
-   double histVals[2]{gammaB1, gammaB2};
-   double bgk2[2]{0, 100};
-   double binBoundaries3[3]{1, 1.5, 2};
-   double weights[2]{122.000000, 112.000000};
-   for (int i = 0; i < 3; i++) {
-      cnstSum -= std::log(constraint[i]);
-   }
-   double nllSum = 0;
-   for (int iB = 0; iB < 2; iB++) {
-      unsigned int b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-      unsigned int b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-      unsigned int b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-      double mu = 0;
-      mu += sig[b1] * (SigXsecOverSM * lumi);
-      mu += (bgk1[b2] * histVals[iB]) * (lumi * 1.000000);
-      mu += (bgk2[b3] * histVals[iB]) * (lumi * 1.000000);
-      double temp;
-      temp = std::log((mu));
-      nllSum -= -(mu) + weights[iB] * temp;
-   }
-   return cnstSum + nllSum;
-}
+// double nll(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2)
+// {
+//    double nomGammaB1 = 400;
+//    double nomGammaB2 = 100;
+//    double nominalLumi = 1;
+//    double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
+//                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
+//                         ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
+//    double cnstSum = 0;
+//    double x[2]{1.25, 1.75};
+//    double sig[2]{20, 10};
+//    double binBoundaries1[3]{1, 1.5, 2};
+//    double bgk1[2]{100, 0};
+//    double binBoundaries2[3]{1, 1.5, 2};
+//    double histVals[2]{gammaB1, gammaB2};
+//    double bgk2[2]{0, 100};
+//    double binBoundaries3[3]{1, 1.5, 2};
+//    double weights[2]{122.000000, 112.000000};
+//    for (int i = 0; i < 3; i++) {
+//       cnstSum -= std::log(constraint[i]);
+//    }
+//    unsigned int b1, b2, b3;
+//    double mu = 0;
+//    double nllSum = 0;
+//    double temp;
+//    for (int iB = 0; iB < 2; iB++) {
+//      b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+//      b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+//      b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+//      mu = 0;
+//      mu += sig[b1] * (SigXsecOverSM * lumi);
+//      mu += (bgk1[b2] * histVals[iB]) * (lumi * 1.000000);
+//      mu += (bgk2[b3] * histVals[iB]) * (lumi * 1.000000);
+//      temp = std::log((mu));
+//      nllSum -= -(mu) + weights[iB] * temp;
+//    }
+//    return cnstSum + nllSum;
+// }
 
-void nll_grad(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2, clad::array_ref<double> _d_lumi,
-              clad::array_ref<double> _d_SigXsecOverSM, clad::array_ref<double> _d_gammaB1,
-              clad::array_ref<double> _d_gammaB2)
-{
+double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2,
+          double lumi, double SigXsecOverSM) {
+ double nomGammaB1 = 400;
+ double nomGammaB2 = 100;
+ double nomGamma1_B1 = 400;
+ double nomGamma1_B2 = 100;
+ double nominalLumi = 1;
+ double constraint[5]{
+     ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
+     ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
+     ExRooPoisson::poisson(nomGamma1_B1, (nomGamma1_B1 * gamma1_B1)),
+     ExRooPoisson::poisson(nomGamma1_B2, (nomGamma1_B2 * gamma1_B2)),
+     ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
+ double cnstSum = 0;
+ double x[2]{1.25, 1.75};
+ double sig0[2]{20, 10};
+ double binBoundaries1[3]{1, 1.5, 2};
+ double bgk0_1[2]{100, 0};
+ double binBoundaries2[3]{1, 1.5, 2};
+ double histVals0[2]{gammaB1, gammaB2};
+ double bgk0_2[2]{0, 100};
+ double binBoundaries3[3]{1, 1.5, 2};
+ double nllSum0_weights[2]{122.000000, 112.000000};
+ double sig1[2]{20, 10};
+ double binBoundaries4[3]{1, 1.5, 2};
+ double bgk1_1[2]{100, 0};
+ double binBoundaries5[3]{1, 1.5, 2};
+ double histVals1[2]{gamma1_B1, gamma1_B2};
+ double bgk1_2[2]{0, 100};
+ double binBoundaries6[3]{1, 1.5, 2};
+ double nllSum1_weights[2]{122.000000, 112.000000};
+ for (int i = 0; i < 5; i++) {
+   cnstSum -= std::log(constraint[i]);
+ }
+ unsigned int b1, b2, b3, b4, b5, b6;
+ double nllSum0 = 0;
+ double mu0 = 0;
+ double temp;
+ for (int iB = 0; iB < 2; iB++) {
+   b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+   b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+   b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+   mu0 += sig0[b1] * (SigXsecOverSM * lumi);
+   mu0 += (bgk0_1[b2] * histVals0[iB]) * (lumi * 1.000000);
+   mu0 += (bgk0_2[b3] * histVals0[iB]) * (lumi * 1.000000);
+   temp = std::log((mu0));
+   nllSum0 -= -(mu0) + nllSum0_weights[iB] * temp;
+ }
+ double nllSum1 = 0;
+ double mu1 = 0;
+ for (int iB = 0; iB < 2; iB++) {
+   b4 = ExRooHistFunc::getBin(binBoundaries4, x[iB]);
+   b5 = ExRooHistFunc::getBin(binBoundaries5, x[iB]);
+   b6 = ExRooHistFunc::getBin(binBoundaries6, x[iB]);
+   mu1 += sig1[b4] * (SigXsecOverSM * lumi);
+   mu1 += (bgk1_1[b5] * histVals1[iB]) * (lumi * 1.000000);
+   mu1 += (bgk1_2[b6] * histVals1[iB]) * (lumi * 1.000000);
+   temp = std::log((mu1));
+   nllSum1 -= -(mu1) + nllSum1_weights[iB] * temp;
+ }
+ return cnstSum + nllSum0 + nllSum1;
 }
 
 template <typename Func = void, typename Grad = void>
@@ -214,7 +274,8 @@ protected:
    {
       return _func(
          static_cast<RooAbsReal const &>(_params[0]).getVal(), static_cast<RooAbsReal const &>(_params[1]).getVal(),
-         static_cast<RooAbsReal const &>(_params[2]).getVal(), static_cast<RooAbsReal const &>(_params[3]).getVal());
+         static_cast<RooAbsReal const &>(_params[2]).getVal(), static_cast<RooAbsReal const &>(_params[3]).getVal(),
+         static_cast<RooAbsReal const &>(_params[4]).getVal(), static_cast<RooAbsReal const &>(_params[5]).getVal());
    }
 
    void evaluateGradient(double *out) const override
@@ -223,9 +284,12 @@ protected:
       out[1] = 0;
       out[2] = 0;
       out[3] = 0;
+      out[4] = 0;
+      out[5] = 0;
       _grad(static_cast<RooAbsReal const &>(_params[0]).getVal(), static_cast<RooAbsReal const &>(_params[1]).getVal(),
             static_cast<RooAbsReal const &>(_params[2]).getVal(), static_cast<RooAbsReal const &>(_params[3]).getVal(),
-            &out[0], &out[1], &out[2], &out[3]);
+            static_cast<RooAbsReal const &>(_params[4]).getVal(), static_cast<RooAbsReal const &>(_params[5]).getVal(),
+            &out[0], &out[1], &out[2], &out[3], &out[4], &out[5]);
    }
 
 private:
@@ -253,8 +317,7 @@ int main()
    //   std::string func = generateNLLCode();
    //   std::cout << func.c_str();
 
-   //   auto df = clad::gradient(nll);
-   //   df.dump();
+   // clad::gradient(nll);
 
    // // FIXME :)
    // gInterpreter->ProcessLine(
@@ -321,14 +384,14 @@ int main()
    setupMinimizer(m1);
    RooMinimizer m2(*nllCodeGen, RooMinimizer::FcnMode::classic);
    setupMinimizer(m2);
-   RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
-   setupMinimizer(m3);
+   // RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
+   // setupMinimizer(m3);
    RooMinimizer m4(*nllCodeGen, RooMinimizer::FcnMode::clad_2);
    setupMinimizer(m4);
 
 #ifdef BENCH
 
-   std::vector<RooMinimizer *> minimizers{&m1, &m2, &m3, &m4};
+   std::vector<RooMinimizer *> minimizers{&m1, &m2, /* &m3, */ &m4};
    std::size_t iMinimizer = state.range(0);
 
    auto &m = *minimizers[iMinimizer];
@@ -344,7 +407,7 @@ int main()
       m.minimize("");
    }
 #else
-   auto &m = m1;
+   auto &m = m4;
    m.minimize("");
    std::unique_ptr<RooFitResult> result{m.save()};
    result->Print();
