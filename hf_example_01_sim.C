@@ -24,22 +24,8 @@
 #include <string>
 #include <cmath>
 
-std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace()
+std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
 {
-
-   std::string InputFile = "./data/example.root";
-   // in case the file is not found
-   bool bfile = gSystem->AccessPathName(InputFile.c_str());
-   if (bfile) {
-      std::cout << "Input file is not found - run prepareHistFactory script " << std::endl;
-      gROOT->ProcessLine(".! prepareHistFactory .");
-      bfile = gSystem->AccessPathName(InputFile.c_str());
-      if (bfile) {
-         std::cout << "Still no " << InputFile << ", giving up.\n";
-         exit(1);
-      }
-   }
-
    using namespace RooStats;
    using namespace HistFactory;
 
@@ -56,36 +42,59 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace()
    meas.SetExportOnly(false);
    meas.SetBinHigh(2);
 
-   for (std::size_t iChannel = 0; iChannel < 2; ++iChannel) {
+   for (std::size_t iChannel = 0; iChannel < nChannels; ++iChannel) {
       // Create a channel
       Channel chan(("channel" + std::to_string(iChannel)).c_str());
-      chan.SetData("data", InputFile);
+
       chan.SetStatErrorConfig(0.05, "Poisson");
+
+      // set data
+      auto dataHist = new TH1F{"data_hist", "data_hist", 2, 1.0, 2.0};
+      dataHist->SetBinContent(1, 122);
+      dataHist->SetBinContent(2, 112);
+      HistFactory::Data data;
+      data.SetHisto(dataHist);
+      chan.SetData(data);
 
       // Now, create some samples
 
       // Create the signal sample
-      Sample signal("signal", "signal", InputFile);
+      Sample signal("signal");
+      auto sigHist = new TH1F{"sig_hist", "sig_hist", 2, 1.0, 2.0};
+      sigHist->SetBinContent(1, 20);
+      sigHist->SetBinContent(2, 10);
+      signal.SetHisto(sigHist);
       // signal.AddOverallSys( "syst1",  0.95, 1.05 );
       signal.AddNormFactor("SigXsecOverSM", 1, 0, 3);
       chan.AddSample(signal);
 
       // Background 1
-      Sample background1("background1", "background1", InputFile);
-      background1.ActivateStatError("background1_statUncert", InputFile);
+      Sample background1("background1");
+      auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", 2, 1.0, 2.0};
+      bkg1Hist->SetBinContent(1, 100);
+      bkg1Hist->SetBinContent(2, 0);
+      background1.SetHisto(bkg1Hist);
+      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", 2, 1.0, 2.0};
+      bkg1UncertHist->SetBinContent(1, 0.05);
+      bkg1UncertHist->SetBinContent(2, 0.05);
+      background1.GetStatError().Activate();
+      background1.GetStatError().SetUseHisto();
+      background1.GetStatError().SetErrorHist(bkg1UncertHist);
       // background1.AddOverallSys( "syst2", 0.95, 1.05  );
       chan.AddSample(background1);
 
-      // Background 1
-      Sample background2("background2", "background2", InputFile);
+      // Background 2
+      Sample background2("background2");
+      auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", 2, 1.0, 2.0};
+      bkg2Hist->SetBinContent(1, 0);
+      bkg2Hist->SetBinContent(2, 100);
+      background2.SetHisto(bkg2Hist);
       background2.ActivateStatError();
       // background2.AddOverallSys( "syst3", 0.95, 1.05  );
       chan.AddSample(background2);
 
       meas.AddChannel(chan);
    }
-
-   meas.CollectHistograms();
 
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
@@ -256,15 +265,18 @@ template <typename Func = void, typename Grad = void>
 class RooGradFuncWrapper final : public RooAbsReal {
 public:
    RooGradFuncWrapper(Func function, Grad gradient, RooWorkspace const &ws, std::vector<std::string> const &paramNames)
-      : RooAbsReal{"RooGradFuncWrapper", "RooGradFuncWrapper"}, _params{"!params", "List of parameters", this},
+      : RooAbsReal{"RooGradFuncWrapper", "RooGradFuncWrapper"}, _paramProxies{"!params", "List of parameters", this},
         _func(function), _grad(gradient)
    {
       for (auto const &paramName : paramNames) {
-         _params.add(*ws.var(paramName.c_str()));
+         auto *var = ws.var(paramName.c_str());
+         _paramProxies.add(*var);
+         _params.emplace_back(var);
       }
    }
    RooGradFuncWrapper(const RooGradFuncWrapper &other, const char *name = nullptr)
-      : RooAbsReal(other, name), _params("!params", this, other._params), _func(other._func), _grad(other._grad)
+      : RooAbsReal(other, name), _paramProxies("!params", this, other._paramProxies), _func(other._func),
+        _grad(other._grad)
    {
    }
 
@@ -275,10 +287,8 @@ public:
 protected:
    double evaluate() const override
    {
-      return _func(
-         static_cast<RooAbsReal const &>(_params[0]).getVal(), static_cast<RooAbsReal const &>(_params[1]).getVal(),
-         static_cast<RooAbsReal const &>(_params[2]).getVal(), static_cast<RooAbsReal const &>(_params[3]).getVal(),
-         static_cast<RooAbsReal const &>(_params[4]).getVal(), static_cast<RooAbsReal const &>(_params[5]).getVal());
+      return _func(_params[0]->getValV(), _params[1]->getValV(), _params[2]->getValV(), _params[3]->getValV(),
+                   _params[4]->getValV(), _params[5]->getValV());
    }
 
    void evaluateGradient(double *out) const override
@@ -289,14 +299,13 @@ protected:
       out[3] = 0;
       out[4] = 0;
       out[5] = 0;
-      _grad(static_cast<RooAbsReal const &>(_params[0]).getVal(), static_cast<RooAbsReal const &>(_params[1]).getVal(),
-            static_cast<RooAbsReal const &>(_params[2]).getVal(), static_cast<RooAbsReal const &>(_params[3]).getVal(),
-            static_cast<RooAbsReal const &>(_params[4]).getVal(), static_cast<RooAbsReal const &>(_params[5]).getVal(),
-            &out[0], &out[1], &out[2], &out[3], &out[4], &out[5]);
+      _grad(_params[0]->getValV(), _params[1]->getValV(), _params[2]->getValV(), _params[3]->getValV(),
+            _params[4]->getValV(), _params[5]->getValV(), &out[0], &out[1], &out[2], &out[3], &out[4], &out[5]);
    }
 
 private:
-   RooListProxy _params;
+   RooListProxy _paramProxies;
+   std::vector<RooRealVar *> _params;
    Func _func;
    Grad _grad;
 };
@@ -344,7 +353,7 @@ int main()
    //  e,
    //   double))gInterpreter->ProcessLine("nll");
 
-   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace();
+   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(2);
 
    auto *mc = static_cast<ModelConfig *>(w->obj("ModelConfig"));
 
@@ -383,10 +392,9 @@ int main()
 
    // Create the minimizers for each configuration
    auto setupMinimizer = [](RooMinimizer &m) {
-      //m.setVerbose(false);
-      //m.setPrintLevel(-1);
-      //m.setStrategy(0);
-      //m.setStrategy(2);
+      m.setVerbose(false);
+      m.setPrintLevel(-1);
+      m.setStrategy(0);
    };
 
    RooMinimizer m1(*nllRooFit, RooMinimizer::FcnMode::classic);
@@ -406,14 +414,25 @@ int main()
    auto &m = *minimizers[iMinimizer];
 
    // For validation
-   //resetParameters();
-   //m.minimize("");
-   //std::unique_ptr<RooFitResult> result{m.save()};
-   //result->Print();
+   // resetParameters();
+   // m.minimize("");
+   // std::unique_ptr<RooFitResult> result{m.save()};
+   // result->Print();
+
+   // If we don't use the actual RooFit model, we don't need to keep the dirty
+   // flag propagation enabled.
+   const bool disableDirtyFlagPropagation = &m != &m1;
+   if (disableDirtyFlagPropagation) {
+      RooAbsReal::setDirtyInhibit(true);
+   }
 
    for (auto _ : state) {
       resetParameters();
       m.minimize("");
+   }
+
+   if (disableDirtyFlagPropagation) {
+      RooAbsReal::setDirtyInhibit(false);
    }
 #else
    auto &m = m4;
@@ -426,14 +445,20 @@ int main()
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
+// For validating results
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
+
+// For benchmarking
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
 BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Name("CodeGen_Numeric");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
-//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
+
+// For profiling
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(100000)->Name("CodeGen_Cald_2");
 
 // Define our main.
 BENCHMARK_MAIN();
