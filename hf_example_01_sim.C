@@ -56,33 +56,35 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace()
    meas.SetExportOnly(false);
    meas.SetBinHigh(2);
 
-   // Create a channel
+   for (std::size_t iChannel = 0; iChannel < 2; ++iChannel) {
+      // Create a channel
+      Channel chan(("channel" + std::to_string(iChannel)).c_str());
+      chan.SetData("data", InputFile);
+      chan.SetStatErrorConfig(0.05, "Poisson");
 
-   Channel chan("channel1");
-   chan.SetData("data", InputFile);
-   chan.SetStatErrorConfig(0.05, "Poisson");
+      // Now, create some samples
 
-   // Now, create some samples
+      // Create the signal sample
+      Sample signal("signal", "signal", InputFile);
+      // signal.AddOverallSys( "syst1",  0.95, 1.05 );
+      signal.AddNormFactor("SigXsecOverSM", 1, 0, 3);
+      chan.AddSample(signal);
 
-   // Create the signal sample
-   Sample signal("signal", "signal", InputFile);
-   // signal.AddOverallSys( "syst1",  0.95, 1.05 );
-   signal.AddNormFactor("SigXsecOverSM", 1, 0, 3);
-   chan.AddSample(signal);
+      // Background 1
+      Sample background1("background1", "background1", InputFile);
+      background1.ActivateStatError("background1_statUncert", InputFile);
+      // background1.AddOverallSys( "syst2", 0.95, 1.05  );
+      chan.AddSample(background1);
 
-   // Background 1
-   Sample background1("background1", "background1", InputFile);
-   background1.ActivateStatError("background1_statUncert", InputFile);
-   // background1.AddOverallSys( "syst2", 0.95, 1.05  );
-   chan.AddSample(background1);
+      // Background 1
+      Sample background2("background2", "background2", InputFile);
+      background2.ActivateStatError();
+      // background2.AddOverallSys( "syst3", 0.95, 1.05  );
+      chan.AddSample(background2);
 
-   // Background 1
-   Sample background2("background2", "background2", InputFile);
-   background2.ActivateStatError();
-   // background2.AddOverallSys( "syst3", 0.95, 1.05  );
-   chan.AddSample(background2);
+      meas.AddChannel(chan);
+   }
 
-   meas.AddChannel(chan);
    meas.CollectHistograms();
 
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
@@ -186,69 +188,68 @@ std::string generateNLLCode()
 //    return cnstSum + nllSum;
 // }
 
-double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2,
-          double lumi, double SigXsecOverSM) {
- double nomGammaB1 = 400;
- double nomGammaB2 = 100;
- double nomGamma1_B1 = 400;
- double nomGamma1_B2 = 100;
- double nominalLumi = 1;
- double constraint[5]{
-     ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
-     ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
-     ExRooPoisson::poisson(nomGamma1_B1, (nomGamma1_B1 * gamma1_B1)),
-     ExRooPoisson::poisson(nomGamma1_B2, (nomGamma1_B2 * gamma1_B2)),
-     ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
- double cnstSum = 0;
- double x[2]{1.25, 1.75};
- double sig0[2]{20, 10};
- double binBoundaries1[3]{1, 1.5, 2};
- double bgk0_1[2]{100, 0};
- double binBoundaries2[3]{1, 1.5, 2};
- double histVals0[2]{gammaB1, gammaB2};
- double bgk0_2[2]{0, 100};
- double binBoundaries3[3]{1, 1.5, 2};
- double nllSum0_weights[2]{122.000000, 112.000000};
- double sig1[2]{20, 10};
- double binBoundaries4[3]{1, 1.5, 2};
- double bgk1_1[2]{100, 0};
- double binBoundaries5[3]{1, 1.5, 2};
- double histVals1[2]{gamma1_B1, gamma1_B2};
- double bgk1_2[2]{0, 100};
- double binBoundaries6[3]{1, 1.5, 2};
- double nllSum1_weights[2]{122.000000, 112.000000};
- for (int i = 0; i < 5; i++) {
-   cnstSum -= std::log(constraint[i]);
- }
- unsigned int b1, b2, b3, b4, b5, b6;
- double nllSum0 = 0;
- double mu0 = 0;
- double temp;
- for (int iB = 0; iB < 2; iB++) {
-   mu0 = 0;
-   b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-   b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-   b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-   mu0 += sig0[b1] * (SigXsecOverSM * lumi);
-   mu0 += (bgk0_1[b2] * histVals0[iB]) * (lumi * 1.000000);
-   mu0 += (bgk0_2[b3] * histVals0[iB]) * (lumi * 1.000000);
-   temp = std::log((mu0));
-   nllSum0 -= -(mu0) + nllSum0_weights[iB] * temp;
- }
- double nllSum1 = 0;
- double mu1 = 0;
- for (int iB = 0; iB < 2; iB++) {
-   mu1 = 0;
-   b4 = ExRooHistFunc::getBin(binBoundaries4, x[iB]);
-   b5 = ExRooHistFunc::getBin(binBoundaries5, x[iB]);
-   b6 = ExRooHistFunc::getBin(binBoundaries6, x[iB]);
-   mu1 += sig1[b4] * (SigXsecOverSM * lumi);
-   mu1 += (bgk1_1[b5] * histVals1[iB]) * (lumi * 1.000000);
-   mu1 += (bgk1_2[b6] * histVals1[iB]) * (lumi * 1.000000);
-   temp = std::log((mu1));
-   nllSum1 -= -(mu1) + nllSum1_weights[iB] * temp;
- }
- return cnstSum + nllSum0 + nllSum1;
+double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2, double lumi, double SigXsecOverSM)
+{
+   double nomGammaB1 = 400;
+   double nomGammaB2 = 100;
+   double nomGamma1_B1 = 400;
+   double nomGamma1_B2 = 100;
+   double nominalLumi = 1;
+   double constraint[5]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
+                        ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
+                        ExRooPoisson::poisson(nomGamma1_B1, (nomGamma1_B1 * gamma1_B1)),
+                        ExRooPoisson::poisson(nomGamma1_B2, (nomGamma1_B2 * gamma1_B2)),
+                        ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
+   double cnstSum = 0;
+   double x[2]{1.25, 1.75};
+   double sig0[2]{20, 10};
+   double binBoundaries1[3]{1, 1.5, 2};
+   double bgk0_1[2]{100, 0};
+   double binBoundaries2[3]{1, 1.5, 2};
+   double histVals0[2]{gammaB1, gammaB2};
+   double bgk0_2[2]{0, 100};
+   double binBoundaries3[3]{1, 1.5, 2};
+   double nllSum0_weights[2]{122.000000, 112.000000};
+   double sig1[2]{20, 10};
+   double binBoundaries4[3]{1, 1.5, 2};
+   double bgk1_1[2]{100, 0};
+   double binBoundaries5[3]{1, 1.5, 2};
+   double histVals1[2]{gamma1_B1, gamma1_B2};
+   double bgk1_2[2]{0, 100};
+   double binBoundaries6[3]{1, 1.5, 2};
+   double nllSum1_weights[2]{122.000000, 112.000000};
+   for (int i = 0; i < 5; i++) {
+      cnstSum -= std::log(constraint[i]);
+   }
+   unsigned int b1, b2, b3, b4, b5, b6;
+   double nllSum0 = 0;
+   double mu0 = 0;
+   double temp;
+   for (int iB = 0; iB < 2; iB++) {
+      mu0 = 0;
+      b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+      b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+      b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+      mu0 += sig0[b1] * (SigXsecOverSM * lumi);
+      mu0 += (bgk0_1[b2] * histVals0[iB]) * (lumi * 1.000000);
+      mu0 += (bgk0_2[b3] * histVals0[iB]) * (lumi * 1.000000);
+      temp = std::log((mu0));
+      nllSum0 -= -(mu0) + nllSum0_weights[iB] * temp;
+   }
+   double nllSum1 = 0;
+   double mu1 = 0;
+   for (int iB = 0; iB < 2; iB++) {
+      mu1 = 0;
+      b4 = ExRooHistFunc::getBin(binBoundaries4, x[iB]);
+      b5 = ExRooHistFunc::getBin(binBoundaries5, x[iB]);
+      b6 = ExRooHistFunc::getBin(binBoundaries6, x[iB]);
+      mu1 += sig1[b4] * (SigXsecOverSM * lumi);
+      mu1 += (bgk1_1[b5] * histVals1[iB]) * (lumi * 1.000000);
+      mu1 += (bgk1_2[b6] * histVals1[iB]) * (lumi * 1.000000);
+      temp = std::log((mu1));
+      nllSum1 -= -(mu1) + nllSum1_weights[iB] * temp;
+   }
+   return cnstSum + nllSum0 + nllSum1;
 }
 
 template <typename Func = void, typename Grad = void>
@@ -366,8 +367,12 @@ int main()
 
    auto *pdf = w->pdf("simPdf");
 
-   std::vector<std::string> paramNames{"Lumi", "SigXsecOverSM", "gamma_stat_channel1_bin_0",
-                                       "gamma_stat_channel1_bin_1"};
+   std::vector<std::string> paramNames{"gamma_stat_channel0_bin_0",
+                                       "gamma_stat_channel0_bin_1",
+                                       "gamma_stat_channel1_bin_0",
+                                       "gamma_stat_channel1_bin_1",
+                                       "Lumi",
+                                       "SigXsecOverSM"};
 
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
 
@@ -378,31 +383,33 @@ int main()
 
    // Create the minimizers for each configuration
    auto setupMinimizer = [](RooMinimizer &m) {
-      m.setVerbose(false);
-      m.setPrintLevel(-1);
+      //m.setVerbose(false);
+      //m.setPrintLevel(-1);
+      //m.setStrategy(0);
+      //m.setStrategy(2);
    };
 
    RooMinimizer m1(*nllRooFit, RooMinimizer::FcnMode::classic);
    setupMinimizer(m1);
    RooMinimizer m2(*nllCodeGen, RooMinimizer::FcnMode::classic);
    setupMinimizer(m2);
-   // RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
-   // setupMinimizer(m3);
+   RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
+   setupMinimizer(m3);
    RooMinimizer m4(*nllCodeGen, RooMinimizer::FcnMode::clad_2);
    setupMinimizer(m4);
 
 #ifdef BENCH
 
-   std::vector<RooMinimizer *> minimizers{&m1, &m2, /* &m3, */ &m4};
+   std::vector<RooMinimizer *> minimizers{&m1, &m2, &m3, &m4};
    std::size_t iMinimizer = state.range(0);
 
    auto &m = *minimizers[iMinimizer];
 
-   //// For validation
-   // resetParameters();
-   // m.minimize("");
-   // std::unique_ptr<RooFitResult> result{m.save()};
-   // result->Print();
+   // For validation
+   //resetParameters();
+   //m.minimize("");
+   //std::unique_ptr<RooFitResult> result{m.save()};
+   //result->Print();
 
    for (auto _ : state) {
       resetParameters();
@@ -418,14 +425,16 @@ int main()
 
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
+
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
 BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
+//BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
+
 // Define our main.
 BENCHMARK_MAIN();
 #endif
