@@ -142,8 +142,8 @@ ExRooAddition Root(ctx, {&ConstrSum, &Nll});
 // Generated Code
 double nll(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2)
 {
-   double nomGammaB1 = 100;
-   double nomGammaB2 = 400;
+   double nomGammaB1 = 400;
+   double nomGammaB2 = 100;
    double nominalLumi = 1;
    double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
@@ -245,6 +245,7 @@ int main()
    gInterpreter->Declare("#pragma cling optimize(2)");
 
    std::string code = Root.getCode();
+   std::cout << code << std::endl;
    //   std::string func = "double nll(" + ctx.getParamList() + ") { \n" + code + " return " + Root.getResult() + ";
    //   \n}\n"; std::cout << func.c_str();
 
@@ -296,21 +297,25 @@ int main()
 
    auto *pdf = w->pdf("simPdf");
 
-   std::unique_ptr<RooFitResult> res{pdf->fitTo(
-      *w->data("obsData"), Constrain(params), GlobalObservables(*mc->GetGlobalObservables()), Save(), PrintLevel(-1))};
-   // auto * res = pdf->fitTo(*w->data("obsData"), Save(), PrintLevel(-1));
-   res->Print();
-
-   resetParameters();
+   ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
 
    RooGradFuncWrapper wrapper(nll, nll_grad, *w,
                               {"Lumi", "SigXsecOverSM", "gamma_stat_channel1_bin_0", "gamma_stat_channel1_bin_1"});
 
-   ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
-   // RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_2); //720 us          720 us
-   // RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_1);
-   // RooMinimizer m(wrapper, RooMinimizer::FcnMode::classic); //713 us          709 us
-   std::unique_ptr<RooAbsReal> nll_1{pdf->createNLL(*w->data("obsData"))}; // 1653 us         1654 us
+   {
+      // RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_2);
+      RooMinimizer m(wrapper, RooMinimizer::FcnMode::clad_1);
+      // RooMinimizer m(wrapper, RooMinimizer::FcnMode::classic);
+
+      m.minimize("");
+      m.setVerbose(false);
+      m.setPrintLevel(-1);
+      std::unique_ptr<RooFitResult> result{m.save()};
+      result->Print();
+   }
+
+   std::unique_ptr<RooAbsReal> nll_1{pdf->createNLL(*w->data("obsData"), Constrain(*mc->GetNuisanceParameters()),
+                                                    GlobalObservables(*mc->GetGlobalObservables()))};
    RooMinimizer m(*nll_1, RooMinimizer::FcnMode::classic);
 
    m.setVerbose(false);
