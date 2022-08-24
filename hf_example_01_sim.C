@@ -2,6 +2,7 @@
 #include <RooWorkspace.h>
 #include <RooRealProxy.h>
 #include <RooAbsPdf.h>
+#include <RooFunctor.h>
 #include <TROOT.h>
 #include <TSystem.h>
 #include <RooMinimizer.h>
@@ -10,6 +11,11 @@
 #include <RooStats/HistFactory/Measurement.h>
 #include <RooStats/HistFactory/MakeModelAndMeasurementsFast.h>
 #include <RooStats/ModelConfig.h>
+
+#include <Minuit2/FCNGradientBase.h>
+#include <Minuit2/VariableMetricMinimizer.h>
+#include <Minuit2/FunctionMinimum.h>
+#include <Minuit2/MnStrategy.h>
 
 #include <TMath.h>
 
@@ -99,7 +105,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
 
-std::string generateNLLCode(contextManager& ctx)
+std::string generateNLLCode(contextManager &ctx)
 {
 
    ExRooRealVar X(ctx, "x", "{1.25, 1.75}", 2);
@@ -112,9 +118,9 @@ std::string generateNLLCode(contextManager& ctx)
    // ExRooRealVar NomAlphaSys(ctx, "nomAlphaSys", "0");
    ExRooRealVar GammaB1(ctx, "gamma_stat_channel0_bin_0"); // Input
    ExRooRealVar NomGammaB1(ctx, "nomGammaB1", "400");
-   ExRooRealVar GammaB2(ctx, "gamma_stat_channel0_bin_1");         // Input
-   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM"); // Input
-   ExRooRealVar Lumi(ctx, "Lumi");               // Input
+   ExRooRealVar GammaB2(ctx, "gamma_stat_channel0_bin_1"); // Input
+   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM");           // Input
+   ExRooRealVar Lumi(ctx, "Lumi");                         // Input
    ExRooRealVar NomGammaB2(ctx, "nomGammaB2", "100");
    ExRooRealVar ChannelWeight(ctx, "cw", "1");
    ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
@@ -157,207 +163,82 @@ std::string generateNLLCode(contextManager& ctx)
 }
 
 // Generated Code
-// double nll(double lumi, double SigXsecOverSM, double gammaB1, double gammaB2)
-// {
-//    double nomGammaB1 = 400;
-//    double nomGammaB2 = 100;
-//    double nominalLumi = 1;
-//    double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
-//                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
-//                         ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
-//    double cnstSum = 0;
-//    double x[2]{1.25, 1.75};
-//    double sig[2]{20, 10};
-//    double binBoundaries1[3]{1, 1.5, 2};
-//    double bgk1[2]{100, 0};
-//    double binBoundaries2[3]{1, 1.5, 2};
-//    double histVals[2]{gammaB1, gammaB2};
-//    double bgk2[2]{0, 100};
-//    double binBoundaries3[3]{1, 1.5, 2};
-//    double weights[2]{122.000000, 112.000000};
-//    for (int i = 0; i < 3; i++) {
-//       cnstSum -= std::log(constraint[i]);
-//    }
-//    unsigned int b1, b2, b3;
-//    double mu = 0;
-//    double nllSum = 0;
-//    double temp;
-//    for (int iB = 0; iB < 2; iB++) {
-//      b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-//      b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-//      b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-//      mu = 0;
-//      mu += sig[b1] * (SigXsecOverSM * lumi);
-//      mu += (bgk1[b2] * histVals[iB]) * (lumi * 1.000000);
-//      mu += (bgk2[b3] * histVals[iB]) * (lumi * 1.000000);
-//      temp = std::log((mu));
-//      nllSum -= -(mu) + weights[iB] * temp;
-//    }
-//    return cnstSum + nllSum;
-// }
-
-// double nll(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2, double lumi, double SigXsecOverSM)
-// {
-//    double nomGammaB1 = 400;
-//    double nomGammaB2 = 100;
-//    double nomGamma1_B1 = 400;
-//    double nomGamma1_B2 = 100;
-//    double nominalLumi = 1;
-//    double constraint[5]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * gammaB1)),
-//                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * gammaB2)),
-//                         ExRooPoisson::poisson(nomGamma1_B1, (nomGamma1_B1 * gamma1_B1)),
-//                         ExRooPoisson::poisson(nomGamma1_B2, (nomGamma1_B2 * gamma1_B2)),
-//                         ExRooGaussian::gauss(lumi, nominalLumi, 0.100000)};
-//    double cnstSum = 0;
-//    double x[2]{1.25, 1.75};
-//    double sig0[2]{20, 10};
-//    double binBoundaries1[3]{1, 1.5, 2};
-//    double bgk0_1[2]{100, 0};
-//    double binBoundaries2[3]{1, 1.5, 2};
-//    double histVals0[2]{gammaB1, gammaB2};
-//    double bgk0_2[2]{0, 100};
-//    double binBoundaries3[3]{1, 1.5, 2};
-//    double nllSum0_weights[2]{122.000000, 112.000000};
-//    double sig1[2]{20, 10};
-//    double binBoundaries4[3]{1, 1.5, 2};
-//    double bgk1_1[2]{100, 0};
-//    double binBoundaries5[3]{1, 1.5, 2};
-//    double histVals1[2]{gamma1_B1, gamma1_B2};
-//    double bgk1_2[2]{0, 100};
-//    double binBoundaries6[3]{1, 1.5, 2};
-//    double nllSum1_weights[2]{122.000000, 112.000000};
-//    for (int i = 0; i < 5; i++) {
-//       cnstSum -= std::log(constraint[i]);
-//    }
-//    unsigned int b1, b2, b3, b4, b5, b6;
-//    double nllSum0 = 0;
-//    double mu0 = 0;
-//    double temp;
-//    for (int iB = 0; iB < 2; iB++) {
-//       mu0 = 0;
-//       b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-//       b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-//       b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-//       mu0 += sig0[b1] * (SigXsecOverSM * lumi);
-//       mu0 += (bgk0_1[b2] * histVals0[iB]) * (lumi * 1.000000);
-//       mu0 += (bgk0_2[b3] * histVals0[iB]) * (lumi * 1.000000);
-//       temp = std::log((mu0));
-//       nllSum0 -= -(mu0) + nllSum0_weights[iB] * temp;
-//    }
-//    double nllSum1 = 0;
-//    double mu1 = 0;
-//    for (int iB = 0; iB < 2; iB++) {
-//       mu1 = 0;
-//       b4 = ExRooHistFunc::getBin(binBoundaries4, x[iB]);
-//       b5 = ExRooHistFunc::getBin(binBoundaries5, x[iB]);
-//       b6 = ExRooHistFunc::getBin(binBoundaries6, x[iB]);
-//       mu1 += sig1[b4] * (SigXsecOverSM * lumi);
-//       mu1 += (bgk1_1[b5] * histVals1[iB]) * (lumi * 1.000000);
-//       mu1 += (bgk1_2[b6] * histVals1[iB]) * (lumi * 1.000000);
-//       temp = std::log((mu1));
-//       nllSum1 -= -(mu1) + nllSum1_weights[iB] * temp;
-//    }
-//    return cnstSum + nllSum0 + nllSum1;
-// }
-
-double nll(double *in) {
-  double nomGammaB1 = 400;
-  double nomGammaB2 = 100;
-  double nominalLumi = 1;
-  double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * in[0])),
-                       ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * in[1])),
-                       ExRooGaussian::gauss(in[2], nominalLumi, 0.100000)};
-  double cnstSum = 0;
-  double x[2]{1.25, 1.75};
-  double sig[2]{20, 10};
-  double binBoundaries1[3]{1, 1.5, 2};
-  double bgk1[2]{100, 0};
-  double binBoundaries2[3]{1, 1.5, 2};
-  double histVals[2]{in[0], in[1]};
-  double bgk2[2]{0, 100};
-  double binBoundaries3[3]{1, 1.5, 2};
-  double weights[2]{122.000000, 112.000000};
-  for (int i = 0; i < 3; i++) {
-    cnstSum -= std::log(constraint[i]);
-  }
-  double mu = 0;
-  double temp;
-  double nllSum = 0;
-  unsigned int b1, b2, b3;
-  for (int iB = 0; iB < 2; iB++) {
-    b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-    b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-    b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-    mu = 0;
-    mu += sig[b1] * (in[3] * in[2]);
-    mu += (bgk1[b2] * histVals[iB]) * (in[2] * 1.000000);
-    mu += (bgk2[b3] * histVals[iB]) * (in[2] * 1.000000);
-    temp = std::log((mu));
-    nllSum -= -(mu) + weights[iB] * temp;
-  }
-  return cnstSum + nllSum;
+double nll(double *in)
+{
+   double nomGammaB1 = 400;
+   double nomGammaB2 = 100;
+   double nominalLumi = 1;
+   double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * in[0])),
+                        ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * in[1])),
+                        ExRooGaussian::gauss(in[2], nominalLumi, 0.100000)};
+   double cnstSum = 0;
+   double x[2]{1.25, 1.75};
+   double sig[2]{20, 10};
+   double binBoundaries1[3]{1, 1.5, 2};
+   double bgk1[2]{100, 0};
+   double binBoundaries2[3]{1, 1.5, 2};
+   double histVals[2]{in[0], in[1]};
+   double bgk2[2]{0, 100};
+   double binBoundaries3[3]{1, 1.5, 2};
+   double weights[2]{122.000000, 112.000000};
+   for (int i = 0; i < 3; i++) {
+      cnstSum -= std::log(constraint[i]);
+   }
+   double mu = 0;
+   double temp;
+   double nllSum = 0;
+   unsigned int b1, b2, b3;
+   for (int iB = 0; iB < 2; iB++) {
+      b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+      b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+      b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+      mu = 0;
+      mu += sig[b1] * (in[3] * in[2]);
+      mu += (bgk1[b2] * histVals[iB]) * (in[2] * 1.000000);
+      mu += (bgk2[b3] * histVals[iB]) * (in[2] * 1.000000);
+      temp = std::log((mu));
+      nllSum -= -(mu) + weights[iB] * temp;
+   }
+   return cnstSum + nllSum;
 }
 
-template <typename Func = void, typename Grad = void>
-class RooGradFuncWrapper final : public RooAbsReal {
+template <typename Func = void>
+class MinuitFuncWrapper final : public ROOT::Minuit2::FCNBase {
 public:
-   RooGradFuncWrapper(Func function, Grad gradient, RooWorkspace const &ws, std::vector<std::string> const &paramNames)
-      : RooAbsReal{"RooGradFuncWrapper", "RooGradFuncWrapper"}, _paramProxies{"!params", "List of parameters", this},
-        _func(function), _grad(gradient)
+   MinuitFuncWrapper(Func function) : _func(function) {}
+
+   double Up() const override { return 0.5; }
+
+   double operator()(const std::vector<double> &x) const override { return _func(const_cast<double *>(x.data())); }
+
+private:
+   Func _func;
+};
+
+template <typename Func = void, typename Grad = void>
+class MinuitGradFuncWrapper final : public ROOT::Minuit2::FCNGradientBase {
+public:
+   MinuitGradFuncWrapper(Func function, Grad gradient, std::size_t n) : _func(function), _grad(gradient), _n{n} {}
+
+   double Up() const override { return 0.5; }
+
+   double operator()(const std::vector<double> &x) const override { return _func(const_cast<double *>(x.data())); }
+
+   std::vector<double> Gradient(const std::vector<double> &x) const override
    {
-     for (auto const &paramName : paramNames) {
-       auto *var = ws.var(paramName.c_str());
-       _paramProxies.add(*var);
-       _params.emplace_back(var);
-     }
-   }
-
-   RooGradFuncWrapper(const RooGradFuncWrapper &other, const char *name = nullptr)
-      : RooAbsReal(other, name), _paramProxies("!params", this, other._paramProxies), _func(other._func),
-        _grad(other._grad)
-   {
-   }
-
-   TObject *clone(const char *newname) const override { return new RooGradFuncWrapper(*this, newname); }
-
-   double defaultErrorLevel() const override { return 0.5; }
-
-protected:
-   double evaluate() const override
-   {
-     unsigned int n = _paramProxies.size();
-     unsigned int idx = 0;
-     double funcParams[n];
-     for (auto const& param : _params){
-       funcParams[idx++] = param->getValV();
-     }
-
-     return _func(funcParams);
-   }
-
-   void evaluateGradient(double *out) const override
-   {
-     // Fixme: We should somehow automatically update these
-     unsigned int n = _paramProxies.size();
-     double funcParams[n];
-     unsigned int idx = 0;
-     for (auto const &param : _params){
-       funcParams[idx] = param->getValV();
-       out[idx] = 0;
-       idx++;
-     }
-       
-     clad::array_ref<double> dx(out, n);
-
-     _grad(funcParams, dx);
+      std::vector<double> out(_n);
+      clad::array_ref<double> cladout(out.data(), _n);
+      _grad(const_cast<double *>(x.data()), cladout);
+      return out;
    }
 
 private:
-   RooListProxy _paramProxies;
-   std::vector<RooRealVar *> _params;
    Func _func;
    Grad _grad;
+   std::size_t _n = 0;
 };
+
+constexpr bool verbose = true;
 
 #ifdef BENCH
 static void hf_example_01_sim(benchmark::State &state)
@@ -413,12 +294,9 @@ int main()
    if (mc->GetNuisanceParameters())
       params.add(*mc->GetNuisanceParameters());
 
-   // params.Print("t");
-
    std::unique_ptr<RooArgSet> originalParams{params.snapshot()};
 
    auto resetParameters = [&]() {
-      params.assignFast(*originalParams);
       for (auto *param : static_range_cast<RooRealVar *>(params)) {
          param->setError(0.0);
       }
@@ -426,89 +304,100 @@ int main()
 
    auto *pdf = w->pdf("simPdf");
 
-   // std::vector<std::string> paramNames{"gamma_stat_channel0_bin_0",
-   //                                     "gamma_stat_channel0_bin_1",
-   //                                     "Lumi",
-   //                                     "SigXsecOverSM"};
-
-   ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
-
-   // Create the likelihood objects with RooFit and our generated code
+   // Create the likelihood objects with RooFit
    std::unique_ptr<RooAbsReal> nllRooFit{pdf->createNLL(*w->data("obsData"), Constrain(*mc->GetNuisanceParameters()),
                                                         GlobalObservables(*mc->GetGlobalObservables()))};
-   std::unique_ptr<RooAbsReal> nllCodeGen{new RooGradFuncWrapper(nll, nll_grad, *w, ctx.inputParams)};
+   RooFunctor nllFunctor{*nllRooFit, {}, params, *w->data("obsData")->get()};
+   std::unique_ptr<RooAbsReal> nllRooFitBatchMode{
+      pdf->createNLL(*w->data("obsData"), Constrain(*mc->GetNuisanceParameters()),
+                     GlobalObservables(*mc->GetGlobalObservables()), BatchMode(true))};
+   RooFunctor nllFunctorBatchMode{*nllRooFitBatchMode, {}, params, *w->data("obsData")->get()};
 
-   // Create the minimizers for each configuration
-   auto setupMinimizer = [](RooMinimizer &m) {
-      m.setVerbose(false);
-      m.setPrintLevel(-1);
-      m.setStrategy(0);
+   MinuitFuncWrapper minuitRooFunc(nllFunctor);
+   MinuitFuncWrapper minuitRooFuncBatchMode(nllFunctorBatchMode);
+   MinuitFuncWrapper minuitFunc(nll);
+   MinuitGradFuncWrapper minuitGradFunc(nll, nll_grad, params.size());
+
+   // We set all parameters away from the minimum as the initial state of the fit, such that the fit is not trivial
+   // TODO: also set limits of parameters
+   ROOT::Minuit2::MnUserParameters mnParamsRooFit;
+   ROOT::Minuit2::MnUserParameters mnParamsCodeGen;
+   for (std::size_t i = 0; i < params.size(); ++i) {
+      mnParamsRooFit.Add(params[i]->GetName(), 0.9, 0.0);
+      mnParamsCodeGen.Add(ctx.inputParams[i], 0.9, 0.0);
+   }
+   ROOT::Minuit2::MnStrategy mnStrategy{0};
+
+   auto reorderFitParams = [&](ROOT::Minuit2::MnUserParameters const &fitPars) {
+      ROOT::Minuit2::MnUserParameters orderedPars;
+
+      for (std::size_t i = 0; i < params.size(); ++i) {
+         const char *name = mnParamsCodeGen.GetName(i).c_str();
+         orderedPars.Add(name, fitPars.Value(name), fitPars.Error(name));
+      }
+
+      return orderedPars;
    };
-
-   RooMinimizer m1(*nllRooFit, RooMinimizer::FcnMode::classic);
-   setupMinimizer(m1);
-   RooMinimizer m2(*nllCodeGen, RooMinimizer::FcnMode::classic);
-   setupMinimizer(m2);
-   // RooMinimizer m3(*nllCodeGen, RooMinimizer::FcnMode::clad_1);
-   // setupMinimizer(m3);
-   RooMinimizer m4(*nllCodeGen, RooMinimizer::FcnMode::clad_2);
-   setupMinimizer(m4);
 
 #ifdef BENCH
 
-   std::vector<RooMinimizer *> minimizers{&m1, &m2, /* &m3, */ &m4};
-   std::size_t iMinimizer = state.range(0);
+   std::size_t iBenchmark = state.range(0);
 
-   auto &m = *minimizers[iMinimizer];
+   if (iBenchmark == 0) {
+      if (verbose) {
+         auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
+         std::cout << reorderFitParams(minimum.UserParameters()) << std::endl;
+      }
 
-   // For validation
-   // resetParameters();
-   // m.minimize("");
-   // std::unique_ptr<RooFitResult> result{m.save()};
-   // result->Print();
+      for (auto _ : state) {
+         ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
+      }
+   } else if (iBenchmark == 1) {
+      if (verbose) {
+         auto minimum =
+            ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFuncBatchMode, mnParamsRooFit, mnStrategy);
+         std::cout << reorderFitParams(minimum.UserParameters()) << std::endl;
+      }
 
-   // If we don't use the actual RooFit model, we don't need to keep the dirty
-   // flag propagation enabled.
-   const bool disableDirtyFlagPropagation = &m != &m1;
-   if (disableDirtyFlagPropagation) {
-      RooAbsReal::setDirtyInhibit(true);
+      for (auto _ : state) {
+         ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFuncBatchMode, mnParamsRooFit, mnStrategy);
+      }
+   } else if (iBenchmark == 2) {
+      if (verbose) {
+         auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
+         std::cout << minimum.UserParameters() << std::endl;
+      }
+
+      for (auto _ : state) {
+         ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
+      }
+   } else if (iBenchmark == 3) {
+      if (verbose) {
+         auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitGradFunc, mnParamsCodeGen, mnStrategy);
+         std::cout << minimum.UserParameters() << std::endl;
+      }
+
+      for (auto _ : state) {
+         ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitGradFunc, mnParamsCodeGen, mnStrategy);
+      }
    }
 
-   for (auto _ : state) {
-      resetParameters();
-      ROOT::Math::MinimizerOptions::SetDefaultStrategy(0);
-      m.minimize("");
-   }
-
-   if (disableDirtyFlagPropagation) {
-      RooAbsReal::setDirtyInhibit(false);
-   }
 #else
-   auto &m = m4;
-   ROOT::Math::MinimizerOptions::SetDefaultStrategy(0);
-   m.minimize("");
-   std::unique_ptr<RooFitResult> result{m.save()};
-   result->Print();
 #endif
 }
 
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-// For validating results
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(1)->Name("RooFit_Numeric");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(1)->Name("CodeGen_Numeric");
-// // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(1)->Name("CodeGen_Clad_1");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1)->Name("CodeGen_Cald_2");
+const auto nIter = verbose ? 1 : 0;
 
-// For benchmarking
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Name("RooFit_Numeric");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Name("CodeGen_Numeric");
-// // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Name("CodeGen_Clad_1");
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Name("CodeGen_Cald_2");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(nIter)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(nIter)->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(nIter)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(100000)->Name("CodeGen_Cald_2");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(100000)->Name("CodeGen_Cald");
 
 // Define our main.
 BENCHMARK_MAIN();
