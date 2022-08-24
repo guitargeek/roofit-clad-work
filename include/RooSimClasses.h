@@ -7,11 +7,12 @@
 class contextManager {
   // Stores a set of decl'd funcs for reuse
   std::unordered_set<std::string> decldFuncs;
-  std::vector<std::string> inputParams;
   // Variable to keep track of loops over data.
   bool isInsideLoop = false;
 
 public:
+  std::vector<std::string> inputParams;
+
   bool isFuncDecld(std::string funcName) {
     return decldFuncs.find(funcName) != decldFuncs.end();
   }
@@ -31,6 +32,8 @@ public:
     params.pop_back();
     return params;
   }
+
+  std::string getNextInputIdx() { return std::to_string(inputParams.size() - 1); }
 };
 
 class ExRooReal : public NTree {
@@ -72,6 +75,7 @@ public:
       globalScope += "double " + obj + " = " + init + ";\n";
     } else {
       ctxM.addInputParam(obj);
+      obj = "in[" + ctxM.getNextInputIdx() + "]";
     }
 
     initDef = false;

@@ -172,7 +172,7 @@ static void getBin_pullback(double *binBoundaries, double x, int _d_y, clad::arr
         }
 }
 
-void nll_grad(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2, double lumi, double SigXsecOverSM, clad::array_ref<double> _d_gammaB1, clad::array_ref<double> _d_gammaB2, clad::array_ref<double> _d_gamma1_B1, clad::array_ref<double> _d_gamma1_B2, clad::array_ref<double> _d_lumi, clad::array_ref<double> _d_SigXsecOverSM) {
+void nll_grad(double *in, clad::array_ref<double> _d_in) {
     double _t0;
     double _t1;
     double _t2;
@@ -183,426 +183,236 @@ void nll_grad(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2
     double _t7;
     double _t8;
     double _t9;
-    double _t10;
-    double _t11;
-    double _t12;
-    double _t13;
-    double _t14;
-    double _t15;
-    double _t16;
-    double _t17;
-    unsigned long _t18;
-    clad::tape<int> _t19 = {};
-    clad::tape<double> _t21 = {};
-    unsigned long _t22;
+    unsigned long _t10;
+    clad::tape<int> _t11 = {};
+    clad::tape<double> _t13 = {};
+    unsigned long _t14;
+    clad::tape<clad::array<double> > _t15 = {};
+    clad::tape<int> _t16 = {};
+    clad::tape<double> _t18 = {};
+    clad::tape<clad::array<double> > _t19 = {};
+    clad::tape<int> _t20 = {};
+    clad::tape<double> _t22 = {};
     clad::tape<clad::array<double> > _t23 = {};
     clad::tape<int> _t24 = {};
     clad::tape<double> _t26 = {};
-    clad::tape<clad::array<double> > _t27 = {};
-    clad::tape<int> _t28 = {};
+    clad::tape<double> _t27 = {};
+    clad::tape<unsigned int> _t28 = {};
     clad::tape<double> _t30 = {};
-    clad::tape<clad::array<double> > _t31 = {};
-    clad::tape<int> _t32 = {};
-    clad::tape<double> _t34 = {};
+    clad::tape<double> _t31 = {};
+    clad::tape<double> _t33 = {};
     clad::tape<double> _t35 = {};
-    clad::tape<unsigned int> _t36 = {};
-    clad::tape<double> _t38 = {};
+    clad::tape<double> _t36 = {};
+    clad::tape<unsigned int> _t37 = {};
     clad::tape<double> _t39 = {};
-    clad::tape<double> _t40 = {};
-    clad::tape<double> _t41 = {};
+    clad::tape<int> _t40 = {};
     clad::tape<double> _t42 = {};
-    clad::tape<unsigned int> _t43 = {};
+    clad::tape<double> _t44 = {};
     clad::tape<double> _t45 = {};
-    clad::tape<int> _t46 = {};
+    clad::tape<unsigned int> _t46 = {};
     clad::tape<double> _t48 = {};
-    clad::tape<double> _t49 = {};
-    clad::tape<double> _t50 = {};
-    clad::tape<unsigned int> _t51 = {};
+    clad::tape<int> _t49 = {};
+    clad::tape<double> _t51 = {};
     clad::tape<double> _t53 = {};
-    clad::tape<int> _t54 = {};
-    clad::tape<double> _t56 = {};
+    clad::tape<double> _t54 = {};
+    clad::tape<int> _t55 = {};
     clad::tape<double> _t57 = {};
-    clad::tape<double> _t58 = {};
-    clad::tape<int> _t59 = {};
-    clad::tape<double> _t61 = {};
-    unsigned long _t62;
-    clad::tape<clad::array<double> > _t63 = {};
-    clad::tape<int> _t64 = {};
-    clad::tape<double> _t66 = {};
-    clad::tape<clad::array<double> > _t67 = {};
-    clad::tape<int> _t68 = {};
-    clad::tape<double> _t70 = {};
-    clad::tape<clad::array<double> > _t71 = {};
-    clad::tape<int> _t72 = {};
-    clad::tape<double> _t74 = {};
-    clad::tape<double> _t75 = {};
-    clad::tape<unsigned int> _t76 = {};
-    clad::tape<double> _t78 = {};
-    clad::tape<double> _t79 = {};
-    clad::tape<double> _t80 = {};
-    clad::tape<double> _t81 = {};
-    clad::tape<double> _t82 = {};
-    clad::tape<unsigned int> _t83 = {};
-    clad::tape<double> _t85 = {};
-    clad::tape<int> _t86 = {};
-    clad::tape<double> _t88 = {};
-    clad::tape<double> _t89 = {};
-    clad::tape<double> _t90 = {};
-    clad::tape<unsigned int> _t91 = {};
-    clad::tape<double> _t93 = {};
-    clad::tape<int> _t94 = {};
-    clad::tape<double> _t96 = {};
-    clad::tape<double> _t97 = {};
-    clad::tape<double> _t98 = {};
-    clad::tape<int> _t99 = {};
-    clad::tape<double> _t101 = {};
     double _d_nomGammaB1 = 0;
     double nomGammaB1 = 400;
     double _d_nomGammaB2 = 0;
     double nomGammaB2 = 100;
-    double _d_nomGamma1_B1 = 0;
-    double nomGamma1_B1 = 400;
-    double _d_nomGamma1_B2 = 0;
-    double nomGamma1_B2 = 100;
     double _d_nominalLumi = 0;
     double nominalLumi = 1;
     _t0 = nomGammaB1;
     _t2 = nomGammaB1;
-    _t1 = gammaB1;
+    _t1 = in[0];
     _t3 = (_t2 * _t1);
     _t4 = nomGammaB2;
     _t6 = nomGammaB2;
-    _t5 = gammaB2;
+    _t5 = in[1];
     _t7 = (_t6 * _t5);
-    _t8 = nomGamma1_B1;
-    _t10 = nomGamma1_B1;
-    _t9 = gamma1_B1;
-    _t11 = (_t10 * _t9);
-    _t12 = nomGamma1_B2;
-    _t14 = nomGamma1_B2;
-    _t13 = gamma1_B2;
-    _t15 = (_t14 * _t13);
-    _t16 = lumi;
-    _t17 = nominalLumi;
-    clad::array<double> _d_constraint(5UL);
-    double constraint[5] = {ExRooPoisson::poisson(_t0, _t3), ExRooPoisson::poisson(_t4, _t7), ExRooPoisson::poisson(_t8, _t11), ExRooPoisson::poisson(_t12, _t15), ExRooGaussian::gauss(_t16, _t17, 0.10000000000000001)};
+    _t8 = in[2];
+    _t9 = nominalLumi;
+    clad::array<double> _d_constraint(3UL);
+    double constraint[3] = {ExRooPoisson::poisson(_t0, _t3), ExRooPoisson::poisson(_t4, _t7), ExRooGaussian::gauss(_t8, _t9, 0.10000000000000001)};
     double _d_cnstSum = 0;
     double cnstSum = 0;
     clad::array<double> _d_x(2UL);
     double x[2] = {1.25, 1.75};
-    clad::array<double> _d_sig0(2UL);
-    double sig0[2] = {20, 10};
+    clad::array<double> _d_sig(2UL);
+    double sig[2] = {20, 10};
     clad::array<double> _d_binBoundaries1(3UL);
     double binBoundaries1[3] = {1, 1.5, 2};
-    clad::array<double> _d_bgk0_1(2UL);
-    double bgk0_1[2] = {100, 0};
+    clad::array<double> _d_bgk1(2UL);
+    double bgk1[2] = {100, 0};
     clad::array<double> _d_binBoundaries2(3UL);
     double binBoundaries2[3] = {1, 1.5, 2};
-    clad::array<double> _d_histVals0(2UL);
-    double histVals0[2] = {gammaB1, gammaB2};
-    clad::array<double> _d_bgk0_2(2UL);
-    double bgk0_2[2] = {0, 100};
+    clad::array<double> _d_histVals(2UL);
+    double histVals[2] = {in[0], in[1]};
+    clad::array<double> _d_bgk2(2UL);
+    double bgk2[2] = {0, 100};
     clad::array<double> _d_binBoundaries3(3UL);
     double binBoundaries3[3] = {1, 1.5, 2};
-    clad::array<double> _d_nllSum0_weights(2UL);
-    double nllSum0_weights[2] = {122., 112.};
-    clad::array<double> _d_sig1(2UL);
-    double sig1[2] = {20, 10};
-    clad::array<double> _d_binBoundaries4(3UL);
-    double binBoundaries4[3] = {1, 1.5, 2};
-    clad::array<double> _d_bgk1_1(2UL);
-    double bgk1_1[2] = {100, 0};
-    clad::array<double> _d_binBoundaries5(3UL);
-    double binBoundaries5[3] = {1, 1.5, 2};
-    clad::array<double> _d_histVals1(2UL);
-    double histVals1[2] = {gamma1_B1, gamma1_B2};
-    clad::array<double> _d_bgk1_2(2UL);
-    double bgk1_2[2] = {0, 100};
-    clad::array<double> _d_binBoundaries6(3UL);
-    double binBoundaries6[3] = {1, 1.5, 2};
-    clad::array<double> _d_nllSum1_weights(2UL);
-    double nllSum1_weights[2] = {122., 112.};
-    _t18 = 0;
+    clad::array<double> _d_weights(2UL);
+    double weights[2] = {122., 112.};
+    _t10 = 0;
     {
         int _d_i = 0;
-        for (int i = 0; i < 5; i++) {
-            _t18++;
-            cnstSum -= std::log(clad::push(_t21, constraint[clad::push(_t19, i)]));
+        for (int i = 0; i < 3; i++) {
+            _t10++;
+            cnstSum -= std::log(clad::push(_t13, constraint[clad::push(_t11, i)]));
         }
     }
-    unsigned int _d_b1 = 0, _d_b2 = 0, _d_b3 = 0, _d_b4 = 0, _d_b5 = 0, _d_b6 = 0;
-    unsigned int b1, b2, b3, b4, b5, b6;
-    double _d_nllSum0 = 0;
-    double nllSum0 = 0;
-    double _d_mu0 = 0;
-    double mu0 = 0;
+    double _d_mu = 0;
+    double mu = 0;
     double _d_temp = 0;
     double temp;
-    _t22 = 0;
+    double _d_nllSum = 0;
+    double nllSum = 0;
+    unsigned int _d_b1 = 0, _d_b2 = 0, _d_b3 = 0;
+    unsigned int b1, b2, b3;
+    _t14 = 0;
     {
         int _d_iB = 0;
         for (int iB = 0; iB < 2; iB++) {
-            _t22++;
-            mu0 = 0;
-            clad::push(_t23, binBoundaries1 , 3UL);
-            b1 = ExRooHistFunc::getBin(binBoundaries1, clad::push(_t26, x[clad::push(_t24, iB)]));
-            clad::push(_t27, binBoundaries2 , 3UL);
-            b2 = ExRooHistFunc::getBin(binBoundaries2, clad::push(_t30, x[clad::push(_t28, iB)]));
-            clad::push(_t31, binBoundaries3 , 3UL);
-            b3 = ExRooHistFunc::getBin(binBoundaries3, clad::push(_t34, x[clad::push(_t32, iB)]));
-            mu0 += clad::push(_t38, sig0[clad::push(_t36, b1)]) * clad::push(_t35, (clad::push(_t40, SigXsecOverSM) * clad::push(_t39, lumi)));
-            mu0 += clad::push(_t48, (clad::push(_t45, bgk0_1[clad::push(_t43, b2)]) * clad::push(_t42, histVals0[clad::push(_t46, iB)]))) * clad::push(_t41, (lumi * 1.));
-            mu0 += clad::push(_t56, (clad::push(_t53, bgk0_2[clad::push(_t51, b3)]) * clad::push(_t50, histVals0[clad::push(_t54, iB)]))) * clad::push(_t49, (lumi * 1.));
-            temp = std::log(clad::push(_t57, mu0));
-            nllSum0 -= -mu0 + clad::push(_t61, nllSum0_weights[clad::push(_t59, iB)]) * clad::push(_t58, temp);
+            _t14++;
+            clad::push(_t15, binBoundaries1 , 3UL);
+            b1 = ExRooHistFunc::getBin(binBoundaries1, clad::push(_t18, x[clad::push(_t16, iB)]));
+            clad::push(_t19, binBoundaries2 , 3UL);
+            b2 = ExRooHistFunc::getBin(binBoundaries2, clad::push(_t22, x[clad::push(_t20, iB)]));
+            clad::push(_t23, binBoundaries3 , 3UL);
+            b3 = ExRooHistFunc::getBin(binBoundaries3, clad::push(_t26, x[clad::push(_t24, iB)]));
+            mu = 0;
+            mu += clad::push(_t30, sig[clad::push(_t28, b1)]) * clad::push(_t27, (clad::push(_t33, in[3]) * clad::push(_t31, in[2])));
+            mu += clad::push(_t42, (clad::push(_t39, bgk1[clad::push(_t37, b2)]) * clad::push(_t36, histVals[clad::push(_t40, iB)]))) * clad::push(_t35, (in[2] * 1.));
+            mu += clad::push(_t51, (clad::push(_t48, bgk2[clad::push(_t46, b3)]) * clad::push(_t45, histVals[clad::push(_t49, iB)]))) * clad::push(_t44, (in[2] * 1.));
+            temp = std::log(clad::push(_t53, mu));
+            nllSum -= -mu + clad::push(_t57, weights[clad::push(_t55, iB)]) * clad::push(_t54, temp);
         }
     }
-    double _d_nllSum1 = 0;
-    double nllSum1 = 0;
-    double _d_mu1 = 0;
-    double mu1 = 0;
-    _t62 = 0;
-    {
-        int _d_iB = 0;
-        for (int iB = 0; iB < 2; iB++) {
-            _t62++;
-            mu1 = 0;
-            clad::push(_t63, binBoundaries4 , 3UL);
-            b4 = ExRooHistFunc::getBin(binBoundaries4, clad::push(_t66, x[clad::push(_t64, iB)]));
-            clad::push(_t67, binBoundaries5 , 3UL);
-            b5 = ExRooHistFunc::getBin(binBoundaries5, clad::push(_t70, x[clad::push(_t68, iB)]));
-            clad::push(_t71, binBoundaries6 , 3UL);
-            b6 = ExRooHistFunc::getBin(binBoundaries6, clad::push(_t74, x[clad::push(_t72, iB)]));
-            mu1 += clad::push(_t78, sig1[clad::push(_t76, b4)]) * clad::push(_t75, (clad::push(_t80, SigXsecOverSM) * clad::push(_t79, lumi)));
-            mu1 += clad::push(_t88, (clad::push(_t85, bgk1_1[clad::push(_t83, b5)]) * clad::push(_t82, histVals1[clad::push(_t86, iB)]))) * clad::push(_t81, (lumi * 1.));
-            mu1 += clad::push(_t96, (clad::push(_t93, bgk1_2[clad::push(_t91, b6)]) * clad::push(_t90, histVals1[clad::push(_t94, iB)]))) * clad::push(_t89, (lumi * 1.));
-            temp = std::log(clad::push(_t97, mu1));
-            nllSum1 -= -mu1 + clad::push(_t101, nllSum1_weights[clad::push(_t99, iB)]) * clad::push(_t98, temp);
-        }
-    }
-    double nll_return = cnstSum + nllSum0 + nllSum1;
+    double nll_return = cnstSum + nllSum;
     goto _label0;
   _label0:
     {
         _d_cnstSum += 1;
-        _d_nllSum0 += 1;
-        _d_nllSum1 += 1;
+        _d_nllSum += 1;
     }
-    for (; _t62; _t62--) {
+    for (; _t14; _t14--) {
         {
-            double _r_d18 = _d_nllSum1;
-            _d_nllSum1 += _r_d18;
-            _d_mu1 += - -_r_d18;
-            double _r70 = -_r_d18 * clad::pop(_t98);
-            int _t100 = clad::pop(_t99);
-            _d_nllSum1_weights[_t100] += _r70;
-            double _r71 = clad::pop(_t101) * -_r_d18;
-            _d_temp += _r71;
-            _d_nllSum1 -= _r_d18;
-        }
-        {
-            double _r_d17 = _d_temp;
-            double _r69 = _r_d17 * clad::custom_derivatives::log_pushforward(clad::pop(_t97), 1.).pushforward;
-            _d_mu1 += _r69;
-            _d_temp -= _r_d17;
-        }
-        {
-            double _r_d16 = _d_mu1;
-            _d_mu1 += _r_d16;
-            double _r64 = _r_d16 * clad::pop(_t89);
-            double _r65 = _r64 * clad::pop(_t90);
-            unsigned int _t92 = clad::pop(_t91);
-            _d_bgk1_2[_t92] += _r65;
-            double _r66 = clad::pop(_t93) * _r64;
-            int _t95 = clad::pop(_t94);
-            _d_histVals1[_t95] += _r66;
-            double _r67 = clad::pop(_t96) * _r_d16;
-            double _r68 = _r67 * 1.;
-            * _d_lumi += _r68;
-            _d_mu1 -= _r_d16;
-        }
-        {
-            double _r_d15 = _d_mu1;
-            _d_mu1 += _r_d15;
-            double _r59 = _r_d15 * clad::pop(_t81);
-            double _r60 = _r59 * clad::pop(_t82);
-            unsigned int _t84 = clad::pop(_t83);
-            _d_bgk1_1[_t84] += _r60;
-            double _r61 = clad::pop(_t85) * _r59;
-            int _t87 = clad::pop(_t86);
-            _d_histVals1[_t87] += _r61;
-            double _r62 = clad::pop(_t88) * _r_d15;
-            double _r63 = _r62 * 1.;
-            * _d_lumi += _r63;
-            _d_mu1 -= _r_d15;
-        }
-        {
-            double _r_d14 = _d_mu1;
-            _d_mu1 += _r_d14;
-            double _r55 = _r_d14 * clad::pop(_t75);
-            unsigned int _t77 = clad::pop(_t76);
-            _d_sig1[_t77] += _r55;
-            double _r56 = clad::pop(_t78) * _r_d14;
-            double _r57 = _r56 * clad::pop(_t79);
-            * _d_SigXsecOverSM += _r57;
-            double _r58 = clad::pop(_t80) * _r56;
-            * _d_lumi += _r58;
-            _d_mu1 -= _r_d14;
-        }
-        {
-            unsigned int _r_d13 = _d_b6;
-            clad::array<double> _r53 = clad::pop(_t71);
-            double _grad22 = 0.;
-            getBin_pullback(_r53, clad::pop(_t74), _r_d13, _d_binBoundaries6, &_grad22);
-            clad::array<double> _r52(_d_binBoundaries6);
-            double _r54 = _grad22;
-            int _t73 = clad::pop(_t72);
-            _d_x[_t73] += _r54;
-            _d_b6 -= _r_d13;
-        }
-        {
-            unsigned int _r_d12 = _d_b5;
-            clad::array<double> _r50 = clad::pop(_t67);
-            double _grad20 = 0.;
-            getBin_pullback(_r50, clad::pop(_t70), _r_d12, _d_binBoundaries5, &_grad20);
-            clad::array<double> _r49(_d_binBoundaries5);
-            double _r51 = _grad20;
-            int _t69 = clad::pop(_t68);
-            _d_x[_t69] += _r51;
-            _d_b5 -= _r_d12;
-        }
-        {
-            unsigned int _r_d11 = _d_b4;
-            clad::array<double> _r47 = clad::pop(_t63);
-            double _grad18 = 0.;
-            getBin_pullback(_r47, clad::pop(_t66), _r_d11, _d_binBoundaries4, &_grad18);
-            clad::array<double> _r46(_d_binBoundaries4);
-            double _r48 = _grad18;
-            int _t65 = clad::pop(_t64);
-            _d_x[_t65] += _r48;
-            _d_b4 -= _r_d11;
-        }
-        {
-            double _r_d10 = _d_mu1;
-            _d_mu1 -= _r_d10;
-        }
-    }
-    for (; _t22; _t22--) {
-        {
-            double _r_d9 = _d_nllSum0;
-            _d_nllSum0 += _r_d9;
-            _d_mu0 += - -_r_d9;
-            double _r44 = -_r_d9 * clad::pop(_t58);
-            int _t60 = clad::pop(_t59);
-            _d_nllSum0_weights[_t60] += _r44;
-            double _r45 = clad::pop(_t61) * -_r_d9;
-            _d_temp += _r45;
-            _d_nllSum0 -= _r_d9;
+            double _r_d9 = _d_nllSum;
+            _d_nllSum += _r_d9;
+            _d_mu += - -_r_d9;
+            double _r36 = -_r_d9 * clad::pop(_t54);
+            int _t56 = clad::pop(_t55);
+            _d_weights[_t56] += _r36;
+            double _r37 = clad::pop(_t57) * -_r_d9;
+            _d_temp += _r37;
+            _d_nllSum -= _r_d9;
         }
         {
             double _r_d8 = _d_temp;
-            double _r43 = _r_d8 * clad::custom_derivatives::log_pushforward(clad::pop(_t57), 1.).pushforward;
-            _d_mu0 += _r43;
+            double _r35 = _r_d8 * clad::custom_derivatives::log_pushforward(clad::pop(_t53), 1.).pushforward;
+            _d_mu += _r35;
             _d_temp -= _r_d8;
         }
         {
-            double _r_d7 = _d_mu0;
-            _d_mu0 += _r_d7;
-            double _r38 = _r_d7 * clad::pop(_t49);
-            double _r39 = _r38 * clad::pop(_t50);
-            unsigned int _t52 = clad::pop(_t51);
-            _d_bgk0_2[_t52] += _r39;
-            double _r40 = clad::pop(_t53) * _r38;
-            int _t55 = clad::pop(_t54);
-            _d_histVals0[_t55] += _r40;
-            double _r41 = clad::pop(_t56) * _r_d7;
-            double _r42 = _r41 * 1.;
-            * _d_lumi += _r42;
-            _d_mu0 -= _r_d7;
+            double _r_d7 = _d_mu;
+            _d_mu += _r_d7;
+            double _r30 = _r_d7 * clad::pop(_t44);
+            double _r31 = _r30 * clad::pop(_t45);
+            unsigned int _t47 = clad::pop(_t46);
+            _d_bgk2[_t47] += _r31;
+            double _r32 = clad::pop(_t48) * _r30;
+            int _t50 = clad::pop(_t49);
+            _d_histVals[_t50] += _r32;
+            double _r33 = clad::pop(_t51) * _r_d7;
+            double _r34 = _r33 * 1.;
+            int _t52 = 2;
+            _d_in[_t52] += _r34;
+            _d_mu -= _r_d7;
         }
         {
-            double _r_d6 = _d_mu0;
-            _d_mu0 += _r_d6;
-            double _r33 = _r_d6 * clad::pop(_t41);
-            double _r34 = _r33 * clad::pop(_t42);
-            unsigned int _t44 = clad::pop(_t43);
-            _d_bgk0_1[_t44] += _r34;
-            double _r35 = clad::pop(_t45) * _r33;
-            int _t47 = clad::pop(_t46);
-            _d_histVals0[_t47] += _r35;
-            double _r36 = clad::pop(_t48) * _r_d6;
-            double _r37 = _r36 * 1.;
-            * _d_lumi += _r37;
-            _d_mu0 -= _r_d6;
+            double _r_d6 = _d_mu;
+            _d_mu += _r_d6;
+            double _r25 = _r_d6 * clad::pop(_t35);
+            double _r26 = _r25 * clad::pop(_t36);
+            unsigned int _t38 = clad::pop(_t37);
+            _d_bgk1[_t38] += _r26;
+            double _r27 = clad::pop(_t39) * _r25;
+            int _t41 = clad::pop(_t40);
+            _d_histVals[_t41] += _r27;
+            double _r28 = clad::pop(_t42) * _r_d6;
+            double _r29 = _r28 * 1.;
+            int _t43 = 2;
+            _d_in[_t43] += _r29;
+            _d_mu -= _r_d6;
         }
         {
-            double _r_d5 = _d_mu0;
-            _d_mu0 += _r_d5;
-            double _r29 = _r_d5 * clad::pop(_t35);
-            unsigned int _t37 = clad::pop(_t36);
-            _d_sig0[_t37] += _r29;
-            double _r30 = clad::pop(_t38) * _r_d5;
-            double _r31 = _r30 * clad::pop(_t39);
-            * _d_SigXsecOverSM += _r31;
-            double _r32 = clad::pop(_t40) * _r30;
-            * _d_lumi += _r32;
-            _d_mu0 -= _r_d5;
+            double _r_d5 = _d_mu;
+            _d_mu += _r_d5;
+            double _r21 = _r_d5 * clad::pop(_t27);
+            unsigned int _t29 = clad::pop(_t28);
+            _d_sig[_t29] += _r21;
+            double _r22 = clad::pop(_t30) * _r_d5;
+            double _r23 = _r22 * clad::pop(_t31);
+            int _t32 = 3;
+            _d_in[_t32] += _r23;
+            double _r24 = clad::pop(_t33) * _r22;
+            int _t34 = 2;
+            _d_in[_t34] += _r24;
+            _d_mu -= _r_d5;
         }
         {
-            unsigned int _r_d4 = _d_b3;
-            clad::array<double> _r27 = clad::pop(_t31);
-            double _grad16 = 0.;
-            getBin_pullback(_r27, clad::pop(_t34), _r_d4, _d_binBoundaries3, &_grad16);
-            clad::array<double> _r26(_d_binBoundaries3);
-            double _r28 = _grad16;
-            int _t33 = clad::pop(_t32);
-            _d_x[_t33] += _r28;
-            _d_b3 -= _r_d4;
+            double _r_d4 = _d_mu;
+            _d_mu -= _r_d4;
         }
         {
-            unsigned int _r_d3 = _d_b2;
-            clad::array<double> _r24 = clad::pop(_t27);
-            double _grad14 = 0.;
-            getBin_pullback(_r24, clad::pop(_t30), _r_d3, _d_binBoundaries2, &_grad14);
-            clad::array<double> _r23(_d_binBoundaries2);
-            double _r25 = _grad14;
-            int _t29 = clad::pop(_t28);
-            _d_x[_t29] += _r25;
-            _d_b2 -= _r_d3;
-        }
-        {
-            unsigned int _r_d2 = _d_b1;
-            clad::array<double> _r21 = clad::pop(_t23);
+            unsigned int _r_d3 = _d_b3;
+            clad::array<double> _r19 = clad::pop(_t23);
             double _grad12 = 0.;
-            getBin_pullback(_r21, clad::pop(_t26), _r_d2, _d_binBoundaries1, &_grad12);
-            clad::array<double> _r20(_d_binBoundaries1);
-            double _r22 = _grad12;
+            getBin_pullback(_r19, clad::pop(_t26), _r_d3, _d_binBoundaries3, &_grad12);
+            clad::array<double> _r18(_d_binBoundaries3);
+            double _r20 = _grad12;
             int _t25 = clad::pop(_t24);
-            _d_x[_t25] += _r22;
-            _d_b1 -= _r_d2;
+            _d_x[_t25] += _r20;
+            _d_b3 -= _r_d3;
         }
         {
-            double _r_d1 = _d_mu0;
-            _d_mu0 -= _r_d1;
+            unsigned int _r_d2 = _d_b2;
+            clad::array<double> _r16 = clad::pop(_t19);
+            double _grad10 = 0.;
+            getBin_pullback(_r16, clad::pop(_t22), _r_d2, _d_binBoundaries2, &_grad10);
+            clad::array<double> _r15(_d_binBoundaries2);
+            double _r17 = _grad10;
+            int _t21 = clad::pop(_t20);
+            _d_x[_t21] += _r17;
+            _d_b2 -= _r_d2;
+        }
+        {
+            unsigned int _r_d1 = _d_b1;
+            clad::array<double> _r13 = clad::pop(_t15);
+            double _grad8 = 0.;
+            getBin_pullback(_r13, clad::pop(_t18), _r_d1, _d_binBoundaries1, &_grad8);
+            clad::array<double> _r12(_d_binBoundaries1);
+            double _r14 = _grad8;
+            int _t17 = clad::pop(_t16);
+            _d_x[_t17] += _r14;
+            _d_b1 -= _r_d1;
         }
     }
-    for (; _t18; _t18--) {
+    for (; _t10; _t10--) {
         {
             double _r_d0 = _d_cnstSum;
             _d_cnstSum += _r_d0;
-            double _r19 = -_r_d0 * clad::custom_derivatives::log_pushforward(clad::pop(_t21), 1.).pushforward;
-            int _t20 = clad::pop(_t19);
-            _d_constraint[_t20] += _r19;
+            double _r11 = -_r_d0 * clad::custom_derivatives::log_pushforward(clad::pop(_t13), 1.).pushforward;
+            int _t12 = clad::pop(_t11);
+            _d_constraint[_t12] += _r11;
             _d_cnstSum -= _r_d0;
         }
     }
     {
-        * _d_gamma1_B1 += _d_histVals1[0];
-        * _d_gamma1_B2 += _d_histVals1[1];
-    }
-    {
-        * _d_gammaB1 += _d_histVals0[0];
-        * _d_gammaB2 += _d_histVals0[1];
+        _d_in[0] += _d_histVals[0];
+        _d_in[1] += _d_histVals[1];
     }
     {
         double _grad0 = 0.;
@@ -614,7 +424,7 @@ void nll_grad(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2
         double _r2 = _r1 * _t1;
         _d_nomGammaB1 += _r2;
         double _r3 = _t2 * _r1;
-        * _d_gammaB1 += _r3;
+        _d_in[0] += _r3;
         double _grad2 = 0.;
         double _grad3 = 0.;
         poisson_pullback(_t4, _t7, _d_constraint[1], &_grad2, &_grad3);
@@ -624,35 +434,15 @@ void nll_grad(double gammaB1, double gammaB2, double gamma1_B1, double gamma1_B2
         double _r6 = _r5 * _t5;
         _d_nomGammaB2 += _r6;
         double _r7 = _t6 * _r5;
-        * _d_gammaB2 += _r7;
+        _d_in[1] += _r7;
         double _grad4 = 0.;
         double _grad5 = 0.;
-        poisson_pullback(_t8, _t11, _d_constraint[2], &_grad4, &_grad5);
-        double _r8 = _grad4;
-        _d_nomGamma1_B1 += _r8;
-        double _r9 = _grad5;
-        double _r10 = _r9 * _t9;
-        _d_nomGamma1_B1 += _r10;
-        double _r11 = _t10 * _r9;
-        * _d_gamma1_B1 += _r11;
         double _grad6 = 0.;
-        double _grad7 = 0.;
-        poisson_pullback(_t12, _t15, _d_constraint[3], &_grad6, &_grad7);
-        double _r12 = _grad6;
-        _d_nomGamma1_B2 += _r12;
-        double _r13 = _grad7;
-        double _r14 = _r13 * _t13;
-        _d_nomGamma1_B2 += _r14;
-        double _r15 = _t14 * _r13;
-        * _d_gamma1_B2 += _r15;
-        double _grad8 = 0.;
-        double _grad9 = 0.;
-        double _grad10 = 0.;
-        gauss_pullback(_t16, _t17, 0.10000000000000001, _d_constraint[4], &_grad8, &_grad9, &_grad10);
-        double _r16 = _grad8;
-        * _d_lumi += _r16;
-        double _r17 = _grad9;
-        _d_nominalLumi += _r17;
-        double _r18 = _grad10;
+        gauss_pullback(_t8, _t9, 0.10000000000000001, _d_constraint[2], &_grad4, &_grad5, &_grad6);
+        double _r8 = _grad4;
+        _d_in[2] += _r8;
+        double _r9 = _grad5;
+        _d_nominalLumi += _r9;
+        double _r10 = _grad6;
     }
 }
