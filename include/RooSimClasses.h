@@ -362,6 +362,7 @@ public:
   std::string translate(std::string &globalScope,
                         std::vector<std::string> &preFuncDecls) override {
     if (elements.size() > 3) {
+      std::string code = "";
       if (init) {
         std::string decl =
             "double elements[" + std::to_string(elements.size()) + "]{";
@@ -373,11 +374,11 @@ public:
         }
         decl[decl.size() - 1] = '}';
         init = false;
-        globalScope += decl + ";\n";
+        code += decl + ";\n";
       }
 
       globalScope += "double eleSum = 0;";
-      std::string code = "for(int i = 0; i < " +
+      code += "for(int i = 0; i < " +
                          std::to_string(elements.size()) + "; i++) {\n \
           eleSum += elements[i]; \n \
         }\n";
