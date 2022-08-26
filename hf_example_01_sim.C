@@ -105,9 +105,10 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
 
-std::string generateNLLCode(contextManager &ctx)
+std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
 {
 
+   // ---------- Constants ----------
    ExRooRealVar X(ctx, "x", "{1.25, 1.75}", 2);
    ExRooConst B2Eps(ctx, 1);
    ExRooConst B1Eps(ctx, 1);
@@ -116,90 +117,165 @@ std::string generateNLLCode(contextManager &ctx)
    // ExRooRealVar AlphaSys(ctx, "alphaSys", "0");
    ExRooConst RandConst2(ctx, 1);
    // ExRooRealVar NomAlphaSys(ctx, "nomAlphaSys", "0");
-   ExRooRealVar GammaB1(ctx, "gamma_stat_channel0_bin_0"); // Input
-   ExRooRealVar NomGammaB1(ctx, "nomGammaB1", "400");
-   ExRooRealVar GammaB2(ctx, "gamma_stat_channel0_bin_1"); // Input
-   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM");           // Input
+
+   // ---------- Channel Independent Vars ----------
    ExRooRealVar Lumi(ctx, "Lumi");                         // Input
-   ExRooRealVar NomGammaB2(ctx, "nomGammaB2", "100");
+   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM");           // Input
+   // Channel weight
    ExRooRealVar ChannelWeight(ctx, "cw", "1");
    ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
 
-   // Hist func part
-   ExRooHistFunc Sig(ctx, &X, "sig", "{20, 10}", "{1, 1.5, 2}"), Bgk1(ctx, &X, "bgk1", "{100, 0}", "{1, 1.5, 2}"),
-      Bgk2(ctx, &X, "bgk2", "{0, 100}", "{1, 1.5, 2}");
-   ExRooParamHistFunc ParamHist(ctx, &X, {&GammaB1, &GammaB2});
-   ExRooProduct constr1(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi});
-   ExRooProduct constr2(ctx, {&Lumi, &B1Eps});
-   ExRooProduct constr3(ctx, {&Lumi, &B2Eps});
-   ExRooProduct Bgk1Shape(ctx, {&Bgk1, &ParamHist}), Bgk2Shape(ctx, {&Bgk2, &ParamHist});
-   ExRooRealSum SumHF(ctx, "mu", {&Sig, &Bgk1Shape, &Bgk2Shape}, {&constr1, &constr2, &constr3});
-   ExRooProduct ProdHF(ctx, {&SumHF});
+   // ---------- Channel Dependent Vars ----------
+   std::vector<ExRooReal*> channelVars;
+   std::vector<ExRooReal*> nll;
+   std::vector<ExRooReal*> constraints;
+   for (int i = 0; i < numChannels; i++) {
+     std::string ichan = std::to_string(i);
 
-   // NLL node
-   ExRooNll2 Nll(ctx, &X, "2", &ProdHF, {122, 112});
+     // Gammas
+     int igamma1 = channelVars.size();
+     channelVars.push_back(new ExRooRealVar(ctx, "gamma_stat_channel" + ichan + "_bin_0")); // Input
+     int inomgamma1 = channelVars.size();
+     channelVars.push_back(new ExRooRealVar(ctx, "nomGamma" + ichan + "B1", "400"));
+     int igamma2 = channelVars.size();
+     channelVars.push_back(new ExRooRealVar(ctx, "gamma_stat_channel" + ichan + "_bin_1")); // Input
+     int inomgamma2 = channelVars.size();
+     channelVars.push_back(new ExRooRealVar(ctx, "nomGamma" + ichan + "B2", "100"));
 
-   // Poisson B0 constraint
-   ExRooProduct PoissProd1(ctx, {&NomGammaB1, &GammaB1});
-   ExRooPoisson Poisson1(ctx, &NomGammaB1, &PoissProd1);
-   // Poisson B1 constraint
-   ExRooProduct PoissProd2(ctx, {&NomGammaB2, &GammaB2});
-   ExRooPoisson Poisson2(ctx, &NomGammaB2, &PoissProd2);
-   // Gaussian alpha constraint
-   // ExRooGaussian GaussAlpha(ctx, &AlphaSys, &NomAlphaSys, &RandConst2);
-   // Gaussian Lumi constraint
-   ExRooGaussian GaussLumi(ctx, &Lumi, &NomLumi, &RandConst);
+     // HistFunc components
+     int isig = channelVars.size();
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "sig" + ichan, "{20, 10}", "{1, 1.5, 2}"));
+     int ibgk1 = channelVars.size();
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk1" + ichan, "{100, 0}", "{1, 1.5, 2}"));
+     int ibgk2 = channelVars.size();
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk2" + ichan, "{0, 100}", "{1, 1.5, 2}"));
+     int iparamHist = channelVars.size();
+     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, {channelVars[igamma1], channelVars[igamma2]}));
+     int iscale1 = channelVars.size();
+     channelVars.push_back(new ExRooProduct(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi}));
+     int iscale2 = channelVars.size();
+     channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B1Eps}));
+     int iscale3 = channelVars.size();
+     channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B2Eps}));
+     int ibkgShape1 = channelVars.size();
+     channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk1], channelVars[iparamHist]}));
+     int ibkgShape2 = channelVars.size();
+     channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk2], channelVars[iparamHist]}));
+     channelVars.push_back(new ExRooRealSum( 
+         ctx, "mu",
+         {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
+         {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
+     channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
+     channelVars.push_back(new ExRooNll2(ctx, &X, "2", channelVars.back(), {122, 112}));
+
+     // NLL
+     nll.push_back(channelVars.back());
+
+     // Constraints
+     channelVars.push_back(new ExRooProduct(ctx, {channelVars[inomgamma1], channelVars[igamma1]}));
+     channelVars.push_back(new ExRooPoisson(ctx, channelVars[inomgamma1], channelVars.back()));
+     constraints.push_back(channelVars.back());
+     channelVars.push_back(new ExRooProduct(ctx, {channelVars[inomgamma2], channelVars[igamma2]}));
+     channelVars.push_back(new ExRooPoisson(ctx, channelVars[inomgamma2], channelVars.back()));
+     constraints.push_back(channelVars.back());
+   //   channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys, &RandConst2));
+   //   constraints.push_back(channelVars.back());
+     channelVars.push_back(new ExRooGaussian(ctx, &Lumi, &NomLumi, &RandConst));
+     constraints.push_back(channelVars.back());
+   }
 
    // Constraint sum
-   ExRooConstraintSum ConstrSum(ctx, {&Poisson1, &Poisson2, /* &GaussAlpha, */
-                                      &GaussLumi});
+   ExRooConstraintSum ConstrSum(ctx, constraints);
+   nll.push_back(&ConstrSum);
 
    // Final root model node
-   ExRooAddition Root(ctx, {&ConstrSum, &Nll});
+   ExRooAddition Root(ctx, nll);
 
    std::string code = Root.getCode();
-   return "double nll(double* in) { \n" + code + " return " + Root.getResult() + ";\n}\n";
-   // return "double nll(" + ctx.getParamList() + ") { \n" + code + " return " + Root.getResult() + ";\n}\n";
+   std::string retVal = Root.getResult();
+
+   // ---------- Cleanup ----------
+   for(auto it : channelVars)
+     delete it;
+
+   return "double nll(double* in) { \n" + code + " return " + retVal + ";\n}\n";
 }
 
 // Generated Code
+// double nll(double *in)
+// {
+//    double nomGammaB1 = 400;
+//    double nomGammaB2 = 100;
+//    double nominalLumi = 1;
+//    double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * in[0])),
+//                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * in[1])),
+//                         ExRooGaussian::gauss(in[2], nominalLumi, 0.100000)};
+//    double cnstSum = 0;
+//    double x[2]{1.25, 1.75};
+//    double sig[2]{20, 10};
+//    double binBoundaries1[3]{1, 1.5, 2};
+//    double bgk1[2]{100, 0};
+//    double binBoundaries2[3]{1, 1.5, 2};
+//    double histVals[2]{in[0], in[1]};
+//    double bgk2[2]{0, 100};
+//    double binBoundaries3[3]{1, 1.5, 2};
+//    double weights[2]{122.000000, 112.000000};
+//    for (int i = 0; i < 3; i++) {
+//       cnstSum -= std::log(constraint[i]);
+//    }
+//    double mu = 0;
+//    double temp;
+//    double nllSum = 0;
+//    unsigned int b1, b2, b3;
+//    for (int iB = 0; iB < 2; iB++) {
+//       b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+//       b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+//       b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+//       mu = 0;
+//       mu += sig[b1] * (in[3] * in[2]);
+//       mu += (bgk1[b2] * histVals[iB]) * (in[2] * 1.000000);
+//       mu += (bgk2[b3] * histVals[iB]) * (in[2] * 1.000000);
+//       temp = std::log((mu));
+//       nllSum -= -(mu) + weights[iB] * temp;
+//    }
+//    return cnstSum + nllSum;
+// }
+
 double nll(double *in)
 {
-   double nomGammaB1 = 400;
-   double nomGammaB2 = 100;
-   double nominalLumi = 1;
-   double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * in[0])),
-                        ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * in[1])),
-                        ExRooGaussian::gauss(in[2], nominalLumi, 0.100000)};
-   double cnstSum = 0;
    double x[2]{1.25, 1.75};
-   double sig[2]{20, 10};
+   double sig0[2]{20, 10};
    double binBoundaries1[3]{1, 1.5, 2};
-   double bgk1[2]{100, 0};
+   double bgk10[2]{100, 0};
    double binBoundaries2[3]{1, 1.5, 2};
    double histVals[2]{in[0], in[1]};
-   double bgk2[2]{0, 100};
+   double bgk20[2]{0, 100};
    double binBoundaries3[3]{1, 1.5, 2};
    double weights[2]{122.000000, 112.000000};
-   for (int i = 0; i < 3; i++) {
-      cnstSum -= std::log(constraint[i]);
-   }
-   double mu = 0;
-   double temp;
+   double nomGamma0B1 = 400;
+   double nomGamma0B2 = 100;
+   double nominalLumi = 1;
+   double constraint[3]{ExRooPoisson::poisson(nomGamma0B1, (nomGamma0B1 * in[0])),
+                        ExRooPoisson::poisson(nomGamma0B2, (nomGamma0B2 * in[1])),
+                        ExRooGaussian::gauss(in[3], nominalLumi, 0.100000)};
+   double cnstSum = 0;
    double nllSum = 0;
-   unsigned int b1, b2, b3;
    for (int iB = 0; iB < 2; iB++) {
-      b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-      b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-      b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-      mu = 0;
-      mu += sig[b1] * (in[3] * in[2]);
-      mu += (bgk1[b2] * histVals[iB]) * (in[2] * 1.000000);
-      mu += (bgk2[b3] * histVals[iB]) * (in[2] * 1.000000);
+      unsigned int b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
+      unsigned int b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
+      unsigned int b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
+      double mu = 0;
+      mu += sig0[b1] * (in[2] * in[3]);
+      mu += (bgk10[b2] * histVals[iB]) * (in[3] * 1.000000);
+      mu += (bgk20[b3] * histVals[iB]) * (in[3] * 1.000000);
+      double temp;
       temp = std::log((mu));
       nllSum -= -(mu) + weights[iB] * temp;
    }
-   return cnstSum + nllSum;
+   for (int i = 0; i < 3; i++) {
+      cnstSum -= std::log(constraint[i]);
+   }
+   return nllSum + cnstSum;
 }
 
 template <typename Func = void>
@@ -257,7 +333,7 @@ int main()
    gInterpreter->Declare("#pragma cling optimize(2)");
 
    contextManager ctx;
-   std::string func = generateNLLCode(ctx);
+   // std::string func = generateNLLCode(ctx, 1);
    // std::cout << func.c_str();
 
    // clad::gradient(nll);
@@ -383,13 +459,15 @@ int main()
    }
 
 #else
+   auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
+   std::cout << minimum.UserParameters() << std::endl;
 #endif
 }
 
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-const auto nIter = verbose ? 1 : 0;
+const auto nIter = 100;
 
 BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(nIter)->Name("RooFit_Numeric");
 BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(nIter)->Name("BatchMode_Numeric");

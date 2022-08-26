@@ -2,8 +2,6 @@
 #include <string>
 #include <unordered_set>
 
-#include "NAry_Tree.h"
-
 class contextManager {
   // Stores a set of decl'd funcs for reuse
   std::unordered_set<std::string> decldFuncs;
@@ -36,14 +34,38 @@ public:
   std::string getNextInputIdx() { return std::to_string(inputParams.size() - 1); }
 };
 
-class ExRooReal : public NTree {
+class ExRooReal {
+  std::vector<ExRooReal*> child;
+  std::vector<std::string> preFuncDecls;
+  
 protected:
   contextManager &ctxM;
+  std::string result;
 
 public:
+
   ExRooReal() = delete;
-  ExRooReal(contextManager &ctx, std::vector<ExRooReal*> ch = {}) : NTree(this, ch), ctxM(ctx) {}
-  std::string result;
+  ExRooReal(contextManager &ctx, std::vector<ExRooReal*> ch = {}) : child(ch), ctxM(ctx) {}
+  virtual ~ExRooReal() = default;
+  
+  void setChildren(std::vector<ExRooReal *> ch) { child = ch;  }
+  
+  std::string getCode() {
+    std::string code = "", global = "";
+    getCodeRecur(this, code, global);
+    return global + code;
+  }
+  void getCodeRecur(ExRooReal *head, std::string &code, std::string &global) {
+    bool ILP = head->isLoopProducing();
+    if (ILP)
+      code += head->buildLoopBegin(global);
+    for (auto it : head->child) {
+      getCodeRecur(it, code, global);
+    }
+    code += head->translate(global, preFuncDecls);
+    if (ILP)
+      code += head->buildLoopEnd(global);
+  }
   virtual std::string translate(std::string &globalScope,
                                 std::vector<std::string> &preFuncDecls) = 0;
   virtual std::string getResult() { return result; }
@@ -243,18 +265,6 @@ public:
     return result;
   }
 };
-
-void NTree::getCodeRecur(ExRooReal *head, std::string &code, std::string &global) {
-  bool ILP = head->data->isLoopProducing();
-  if (ILP)
-    code += head->data->buildLoopBegin(global);
-  for (auto it : head->child) {
-    getCodeRecur(it, code, global);
-  }
-  code += head->data->translate(global, preFuncDecls);
-  if (ILP)
-    code += head->data->buildLoopEnd(global);
-}
 
 class ExRooPoisson : public ExRooReal {
   ExRooReal *x;
