@@ -150,7 +150,7 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
      int ibgk2 = channelVars.size();
      channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk2" + ichan, "{0, 100}", "{1, 1.5, 2}"));
      int iparamHist = channelVars.size();
-     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, {channelVars[igamma1], channelVars[igamma2]}));
+     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, {channelVars[igamma1], channelVars[igamma2]}, "histVals" + ichan));
      int iscale1 = channelVars.size();
      channelVars.push_back(new ExRooProduct(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi}));
      int iscale2 = channelVars.size();
@@ -166,7 +166,7 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
          {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
          {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
      channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
-     channelVars.push_back(new ExRooNll2(ctx, &X, "2", channelVars.back(), {122, 112}));
+     channelVars.push_back(new ExRooNll2(ctx, &X, "2", channelVars.back(), {122, 112}, "nllSum" + ichan, "weights" + ichan));
 
      // NLL
      nll.push_back(channelVars.back());
@@ -240,7 +240,6 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
 //    }
 //    return cnstSum + nllSum;
 // }
-
 template <typename Func = void>
 class MinuitFuncWrapper final : public ROOT::Minuit2::FCNBase {
 public:
@@ -278,6 +277,7 @@ private:
 };
 
 constexpr bool verbose = true;
+bool nllDeclared = false;
 
 #ifdef BENCH
 static void hf_example_01_sim(benchmark::State &state)
@@ -288,6 +288,7 @@ int main()
 
    using namespace RooStats;
    using namespace RooFit;
+   int testChannels = 5;
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
    auto &msg = RooMsgService::instance();
@@ -296,14 +297,17 @@ int main()
    gInterpreter->Declare("#pragma cling optimize(2)");
 
    contextManager ctx;
-   std::string func = generateNLLCode(ctx, 1);
+   std::string func = generateNLLCode(ctx, testChannels);
+   std::cout << func;
 
    // clad::gradient(nll);
 
-   // // FIXME :)
-   gInterpreter->ProcessLine("#include "
-                             "\"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
-   gInterpreter->Declare(func.c_str());
+   if (!nllDeclared) {
+      gInterpreter->AddIncludePath(" -I$PWD");
+      gInterpreter->ProcessLine("#include \"include/RooSimClasses.h\"");
+      gInterpreter->Declare(func.c_str());
+      nllDeclared = true;
+   }
 
    // gInterpreter->ProcessLine(
    //     "#include \"/home/grimmyshini/cern/src/tools/clad/include/clad/Differentiator/Differentiator.h\"");
@@ -315,9 +319,9 @@ int main()
    //       "void (*ptr)(double, double, clad::array_ref<double>) = nll_grad;");
    //   // get the grad function pointer.
    // auto gradObj = (void (*)(double, double, clad::array_ref<double>))gInterpreter->ProcessLine("ptr");
-   auto funcObj = (double (*)(double* ))gInterpreter->ProcessLine("nll");
+   auto funcObj = (double (*)(double *))gInterpreter->ProcessLine("nll;");
 
-   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(1);
+   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(testChannels);
 
    auto *mc = static_cast<ModelConfig *>(w->obj("ModelConfig"));
 
@@ -418,6 +422,9 @@ int main()
 #else
    auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
    std::cout << reorderFitParams(minimum.UserParameters()) << std::endl;
+
+   auto minimum2 = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
+   std::cout << minimum2.UserParameters() << std::endl;   
 #endif
 }
 

@@ -189,9 +189,10 @@ class ExRooParamHistFunc : public ExRooReal {
   ExRooRealVar *x;
   std::vector<ExRooReal *> values;
   bool init = true;
+  std::string name;
 
 public:
-  ExRooParamHistFunc(contextManager &ctx, ExRooRealVar *in, std::vector<ExRooReal *> val) : ExRooReal(ctx), x(in), values(val) {
+  ExRooParamHistFunc(contextManager &ctx, ExRooRealVar *in, std::vector<ExRooReal *> val, std::string valName) : ExRooReal(ctx), x(in), values(val), name(valName) {
     val.push_back(in);
     setChildren(val);
   }
@@ -200,18 +201,18 @@ public:
                         std::vector<std::string> &preFuncDecls) override {
     if (init) {
       std::string decl =
-          "double histVals[" + std::to_string(values.size()) + "]{";
+          "double " + name + "[" + std::to_string(values.size()) + "]{";
       int idx = 0;
       for (auto &it : values) {
         decl += it->getResult() + ",";
-        it->updateResults("histVals[" + std::to_string(idx) + "]");
+        it->updateResults(name + "[" + std::to_string(idx) + "]");
         idx++;
       }
       decl[decl.size() - 1] = '}';
       init = false;
       globalScope += decl + ";\n";
     }
-    result = "histVals[" + x->getBinVar() + "]";
+    result = name + "[" + x->getBinVar() + "]";
 
     return "";
   }
@@ -417,8 +418,8 @@ class ExRooNll : public ExRooReal {
 
 public:
   ExRooNll(contextManager &ctx, ExRooRealVar *in, std::string binNum,
-           ExRooReal *funcProd)
-      : ExRooReal(ctx, {in, funcProd}), bins(binNum), x(in), func(funcProd) {}
+           ExRooReal *funcProd, std::string name)
+      : ExRooReal(ctx, {in, funcProd}), bins(binNum), x(in), func(funcProd), res(name) {}
   bool isLoopProducing() override { return true; }
   std::string buildLoopBegin(std::string &globalScope) override {
     std::string code = "double " + res + " = 0;\n";
@@ -445,6 +446,7 @@ class ExRooNll2 : public ExRooReal {
   ExRooRealVar *x;
   ExRooReal *func;
   std::string res = "nllSum";
+  std::string weightName;
   std::string kahnSum = "ksum";
   std::string bins;
   std::string idx;
@@ -452,11 +454,11 @@ class ExRooNll2 : public ExRooReal {
 
 public:
   ExRooNll2(contextManager &ctx, ExRooRealVar *in, std::string binNum,
-           ExRooReal *funcProd,std::vector<double> wgts)
-      : ExRooReal(ctx, {in, funcProd}), bins(binNum), x(in), func(funcProd), weights(wgts) {}
+           ExRooReal *funcProd,std::vector<double> wgts, std::string name, std::string wName)
+      : ExRooReal(ctx, {in, funcProd}), bins(binNum), x(in), func(funcProd), weights(wgts), res(name), weightName(wName){}
   bool isLoopProducing() override { return true; }
   std::string buildLoopBegin(std::string &globalScope) override {
-    std::string code = "double " + res + " = 0;\n";
+    std::string code = "";
     result = res;
     // code += "KSum " + kahnSum + ";\n";
     code += "for(int iB = 0; iB < " + bins + "; iB++) {\n";
@@ -469,17 +471,19 @@ public:
 
   std::string translate(std::string &globalScope,
                         std::vector<std::string> &preFuncDecls) override {
-    std::string decl = "double weights[" + std::to_string(weights.size()) + "]{";
+    std::string nllDecl = "double " + res + " = 0;\n";
+    std::string decl = "double " + weightName + "[" + std::to_string(weights.size()) + "]{";
     for(auto& it : weights) {
       decl += std::to_string(it) + ",";
     }
     decl.pop_back();
     decl += "};\n";
+    globalScope += nllDecl;
     globalScope += decl;
     std::string code = "double temp;\n";
     code += "temp = std::log(" + func->getResult() + ");\n";
     // code += res + " = " + kahnSum + ".accumulate(" + res + ", temp);\n";
-    code += res + " -= -" + func->getResult() + " + weights[" + idx + "] * temp;\n";
+    code += res + " -= -" + func->getResult() + " + " + weightName + "[" + idx + "] * temp;\n";
     return code;
   }
 };
