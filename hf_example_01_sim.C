@@ -241,43 +241,6 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
 //    return cnstSum + nllSum;
 // }
 
-double nll(double *in)
-{
-   double x[2]{1.25, 1.75};
-   double sig0[2]{20, 10};
-   double binBoundaries1[3]{1, 1.5, 2};
-   double bgk10[2]{100, 0};
-   double binBoundaries2[3]{1, 1.5, 2};
-   double histVals[2]{in[0], in[1]};
-   double bgk20[2]{0, 100};
-   double binBoundaries3[3]{1, 1.5, 2};
-   double weights[2]{122.000000, 112.000000};
-   double nomGamma0B1 = 400;
-   double nomGamma0B2 = 100;
-   double nominalLumi = 1;
-   double constraint[3]{ExRooPoisson::poisson(nomGamma0B1, (nomGamma0B1 * in[0])),
-                        ExRooPoisson::poisson(nomGamma0B2, (nomGamma0B2 * in[1])),
-                        ExRooGaussian::gauss(in[3], nominalLumi, 0.100000)};
-   double cnstSum = 0;
-   double nllSum = 0;
-   for (int iB = 0; iB < 2; iB++) {
-      unsigned int b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-      unsigned int b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-      unsigned int b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-      double mu = 0;
-      mu += sig0[b1] * (in[2] * in[3]);
-      mu += (bgk10[b2] * histVals[iB]) * (in[3] * 1.000000);
-      mu += (bgk20[b3] * histVals[iB]) * (in[3] * 1.000000);
-      double temp;
-      temp = std::log((mu));
-      nllSum -= -(mu) + weights[iB] * temp;
-   }
-   for (int i = 0; i < 3; i++) {
-      cnstSum -= std::log(constraint[i]);
-   }
-   return nllSum + cnstSum;
-}
-
 template <typename Func = void>
 class MinuitFuncWrapper final : public ROOT::Minuit2::FCNBase {
 public:
@@ -333,16 +296,14 @@ int main()
    gInterpreter->Declare("#pragma cling optimize(2)");
 
    contextManager ctx;
-   // std::string func = generateNLLCode(ctx, 1);
-   // std::cout << func.c_str();
+   std::string func = generateNLLCode(ctx, 1);
 
    // clad::gradient(nll);
 
    // // FIXME :)
-   // gInterpreter->ProcessLine(
-   //     "#include "
-   //     "\"/home/grimmyshini/ROOT/examples/roofit-clad-work/RooSimClasses.h\"");
-   // gInterpreter->Declare(func.c_str());
+   gInterpreter->ProcessLine("#include "
+                             "\"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
+   gInterpreter->Declare(func.c_str());
 
    // gInterpreter->ProcessLine(
    //     "#include \"/home/grimmyshini/cern/src/tools/clad/include/clad/Differentiator/Differentiator.h\"");
@@ -353,12 +314,8 @@ int main()
    //   gInterpreter->ProcessLine(
    //       "void (*ptr)(double, double, clad::array_ref<double>) = nll_grad;");
    //   // get the grad function pointer.
-   //   auto gradObj =
-   //       (void (*)(double, double,
-   //                 clad::array_ref<double>))gInterpreter->ProcessLine("ptr");
-   //   auto funcObj = (double (*)(doubl
-   //  e,
-   //   double))gInterpreter->ProcessLine("nll");
+   // auto gradObj = (void (*)(double, double, clad::array_ref<double>))gInterpreter->ProcessLine("ptr");
+   auto funcObj = (double (*)(double* ))gInterpreter->ProcessLine("nll");
 
    std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(1);
 
@@ -391,8 +348,8 @@ int main()
 
    MinuitFuncWrapper minuitRooFunc(nllFunctor);
    MinuitFuncWrapper minuitRooFuncBatchMode(nllFunctorBatchMode);
-   MinuitFuncWrapper minuitFunc(nll);
-   MinuitGradFuncWrapper minuitGradFunc(nll, nll_grad, params.size());
+   MinuitFuncWrapper minuitFunc(funcObj);
+   MinuitGradFuncWrapper minuitGradFunc(funcObj, nll_grad, params.size());
 
    // We set all parameters away from the minimum as the initial state of the fit, such that the fit is not trivial
    // TODO: also set limits of parameters
@@ -459,8 +416,8 @@ int main()
    }
 
 #else
-   auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
-   std::cout << minimum.UserParameters() << std::endl;
+   auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
+   std::cout << reorderFitParams(minimum.UserParameters()) << std::endl;
 #endif
 }
 

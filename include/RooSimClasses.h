@@ -1,3 +1,6 @@
+#ifndef ROOSIMCLASSES_H
+#define ROOSIMCLASSES_H
+
 #include <iostream>
 #include <string>
 #include <unordered_set>
@@ -480,3 +483,4 @@ public:
     return code;
   }
 };
+#endif
