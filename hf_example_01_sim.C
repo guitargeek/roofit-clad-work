@@ -124,11 +124,13 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
    // Channel weight
    ExRooRealVar ChannelWeight(ctx, "cw", "1");
    ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
+   ExRooGaussian GaussLumi(ctx, &Lumi, &NomLumi, &RandConst);
 
    // ---------- Channel Dependent Vars ----------
    std::vector<ExRooReal*> channelVars;
    std::vector<ExRooReal*> nll;
    std::vector<ExRooReal*> constraints;
+   constraints.push_back(&GaussLumi);
    for (int i = 0; i < numChannels; i++) {
      std::string ichan = std::to_string(i);
 
@@ -180,8 +182,6 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
      constraints.push_back(channelVars.back());
    //   channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys, &RandConst2));
    //   constraints.push_back(channelVars.back());
-     channelVars.push_back(new ExRooGaussian(ctx, &Lumi, &NomLumi, &RandConst));
-     constraints.push_back(channelVars.back());
    }
 
    // Constraint sum
