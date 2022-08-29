@@ -14,6 +14,10 @@ class contextManager {
 public:
   std::vector<std::string> inputParams;
 
+  const std::string funcName;
+
+  contextManager(std::string functionName = "func") : funcName(functionName) {}
+
   bool isFuncDecld(std::string funcName) {
     return decldFuncs.find(funcName) != decldFuncs.end();
   }
@@ -435,10 +439,11 @@ public:
 
   std::string translate(std::string &globalScope,
                         std::vector<std::string> &preFuncDecls) override {
-    std::string code = "double temp;\n";
-    code += "temp = std::log(" + func->getResult() + ");\n";
+    std::string tmpName = "temp" + res;
+    std::string code = "double " + tmpName + ";\n";
+    code += tmpName + " = std::log(" + func->getResult() + ");\n";
     // code += res + " = " + kahnSum + ".accumulate(" + res + ", temp);\n";
-    code += res + " -= temp;\n";
+    code += res + " -= " + tmpName + ";\n";
     return code;
   }
 };
@@ -481,10 +486,11 @@ public:
     decl += "};\n";
     globalScope += nllDecl;
     globalScope += decl;
-    std::string code = "double temp;\n";
-    code += "temp = std::log(" + func->getResult() + ");\n";
+    std::string tmpName = "temp" + res;
+    std::string code = "double " + tmpName + ";\n";
+    code += tmpName + " = std::log(" + func->getResult() + ");\n";
     // code += res + " = " + kahnSum + ".accumulate(" + res + ", temp);\n";
-    code += res + " -= -" + func->getResult() + " + " + weightName + "[" + idx + "] * temp;\n";
+    code += res + " -= -" + func->getResult() + " + " + weightName + "[" + idx + "] * " + tmpName + ";\n";
     return code;
   }
 };

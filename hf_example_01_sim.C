@@ -26,7 +26,6 @@
 #include <clad/Differentiator/Differentiator.h>
 
 #include "include/RooSimClasses.h"
-#include "include/derivative.h"
 #include <string>
 #include <cmath>
 
@@ -164,7 +163,7 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
      int ibkgShape2 = channelVars.size();
      channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk2], channelVars[iparamHist]}));
      channelVars.push_back(new ExRooRealSum( 
-         ctx, "mu",
+         ctx, "mu" + ichan,
          {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
          {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
      channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
@@ -198,48 +197,9 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
    for(auto it : channelVars)
      delete it;
 
-   return "double nll(double* in) { \n" + code + " return " + retVal + ";\n}\n";
+   return "double " + ctx.funcName + "(double* in) { \n" + code + " return " + retVal + ";\n}\n";
 }
 
-// Generated Code
-// double nll(double *in)
-// {
-//    double nomGammaB1 = 400;
-//    double nomGammaB2 = 100;
-//    double nominalLumi = 1;
-//    double constraint[3]{ExRooPoisson::poisson(nomGammaB1, (nomGammaB1 * in[0])),
-//                         ExRooPoisson::poisson(nomGammaB2, (nomGammaB2 * in[1])),
-//                         ExRooGaussian::gauss(in[2], nominalLumi, 0.100000)};
-//    double cnstSum = 0;
-//    double x[2]{1.25, 1.75};
-//    double sig[2]{20, 10};
-//    double binBoundaries1[3]{1, 1.5, 2};
-//    double bgk1[2]{100, 0};
-//    double binBoundaries2[3]{1, 1.5, 2};
-//    double histVals[2]{in[0], in[1]};
-//    double bgk2[2]{0, 100};
-//    double binBoundaries3[3]{1, 1.5, 2};
-//    double weights[2]{122.000000, 112.000000};
-//    for (int i = 0; i < 3; i++) {
-//       cnstSum -= std::log(constraint[i]);
-//    }
-//    double mu = 0;
-//    double temp;
-//    double nllSum = 0;
-//    unsigned int b1, b2, b3;
-//    for (int iB = 0; iB < 2; iB++) {
-//       b1 = ExRooHistFunc::getBin(binBoundaries1, x[iB]);
-//       b2 = ExRooHistFunc::getBin(binBoundaries2, x[iB]);
-//       b3 = ExRooHistFunc::getBin(binBoundaries3, x[iB]);
-//       mu = 0;
-//       mu += sig[b1] * (in[3] * in[2]);
-//       mu += (bgk1[b2] * histVals[iB]) * (in[2] * 1.000000);
-//       mu += (bgk2[b3] * histVals[iB]) * (in[2] * 1.000000);
-//       temp = std::log((mu));
-//       nllSum -= -(mu) + weights[iB] * temp;
-//    }
-//    return cnstSum + nllSum;
-// }
 template <typename Func = void>
 class MinuitFuncWrapper final : public ROOT::Minuit2::FCNBase {
 public:
@@ -288,7 +248,7 @@ int main()
 
    using namespace RooStats;
    using namespace RooFit;
-   int testChannels = 5;
+   int testChannels = 50;
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
    auto &msg = RooMsgService::instance();
@@ -296,30 +256,28 @@ int main()
 
    gInterpreter->Declare("#pragma cling optimize(2)");
 
-   contextManager ctx;
+   contextManager ctx("nll");
+   std::string funcName = ctx.funcName;
+   std::string gradName = funcName + "_grad";
    std::string func = generateNLLCode(ctx, testChannels);
-   std::cout << func;
-
-   // clad::gradient(nll);
 
    if (!nllDeclared) {
-      gInterpreter->AddIncludePath(" -I$PWD");
-      gInterpreter->ProcessLine("#include \"include/RooSimClasses.h\"");
+      gInterpreter->ProcessLine(
+         "#include \"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
       gInterpreter->Declare(func.c_str());
+
+      gInterpreter->ProcessLine("#include \"clad/Differentiator/Differentiator.h\"");
+      // calculate gradient
+      gInterpreter->ProcessLine(("clad::gradient(" + funcName + ");").c_str());
       nllDeclared = true;
    }
 
-   // gInterpreter->ProcessLine(
-   //     "#include \"/home/grimmyshini/cern/src/tools/clad/include/clad/Differentiator/Differentiator.h\"");
-   //   // calculate gradient
-   //   gInterpreter->ProcessLine("clad::gradient(nll).dump();");
-
-   //   // get correct gradient overload.
-   //   gInterpreter->ProcessLine(
-   //       "void (*ptr)(double, double, clad::array_ref<double>) = nll_grad;");
-   //   // get the grad function pointer.
-   // auto gradObj = (void (*)(double, double, clad::array_ref<double>))gInterpreter->ProcessLine("ptr");
-   auto funcObj = (double (*)(double *))gInterpreter->ProcessLine("nll;");
+   // get the grad function pointer.
+   auto gradObj =
+       (void (*)(double *, clad::array_ref<double>))gInterpreter->ProcessLine(
+           (gradName + ";").c_str());
+   auto funcObj = (double (*)(double *))gInterpreter->ProcessLine(
+       (funcName + ";").c_str());
 
    std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(testChannels);
 
@@ -353,7 +311,7 @@ int main()
    MinuitFuncWrapper minuitRooFunc(nllFunctor);
    MinuitFuncWrapper minuitRooFuncBatchMode(nllFunctorBatchMode);
    MinuitFuncWrapper minuitFunc(funcObj);
-   MinuitGradFuncWrapper minuitGradFunc(funcObj, nll_grad, params.size());
+   MinuitGradFuncWrapper minuitGradFunc(funcObj, gradObj, params.size());
 
    // We set all parameters away from the minimum as the initial state of the fit, such that the fit is not trivial
    // TODO: also set limits of parameters
@@ -425,6 +383,9 @@ int main()
 
    auto minimum2 = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
    std::cout << minimum2.UserParameters() << std::endl;   
+
+   auto minimum3 = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitGradFunc, mnParamsCodeGen, mnStrategy);
+   std::cout << minimum3.UserParameters() << std::endl;
 #endif
 }
 
@@ -439,7 +400,7 @@ BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(nIter)->Name("CodeG
 BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
-// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(100000)->Name("CodeGen_Cald");
+// BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");
 
 // Define our main.
 BENCHMARK_MAIN();
