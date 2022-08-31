@@ -236,8 +236,8 @@ private:
    std::size_t _n = 0;
 };
 
-constexpr bool verbose = true;
-bool nllDeclared = false;
+constexpr bool verbose = false;
+std::unordered_map<int,bool> nllDeclared;
 
 #ifdef BENCH
 static void hf_example_01_sim(benchmark::State &state)
@@ -248,7 +248,11 @@ int main()
 
    using namespace RooStats;
    using namespace RooFit;
+#ifdef BENCH
+   int testChannels = state.range(1);
+#else
    int testChannels = 50;
+#endif
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
    auto &msg = RooMsgService::instance();
@@ -256,12 +260,12 @@ int main()
 
    gInterpreter->Declare("#pragma cling optimize(2)");
 
-   contextManager ctx("nll");
+   contextManager ctx("nll" + std::to_string(testChannels));
    std::string funcName = ctx.funcName;
    std::string gradName = funcName + "_grad";
    std::string func = generateNLLCode(ctx, testChannels);
 
-   if (!nllDeclared) {
+   if (!nllDeclared[testChannels]) {
       gInterpreter->ProcessLine(
          "#include \"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
       gInterpreter->Declare(func.c_str());
@@ -269,7 +273,7 @@ int main()
       gInterpreter->ProcessLine("#include \"clad/Differentiator/Differentiator.h\"");
       // calculate gradient
       gInterpreter->ProcessLine(("clad::gradient(" + funcName + ");").c_str());
-      nllDeclared = true;
+      nllDeclared[testChannels] = true;
    }
 
    // get the grad function pointer.
@@ -392,12 +396,12 @@ int main()
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-const auto nIter = 100;
+const auto nIter = 10;
 
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(0)->Iterations(nIter)->Name("RooFit_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(1)->Iterations(nIter)->Name("BatchMode_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(2)->Iterations(nIter)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(nIter)->Name("CodeGen_Clad");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
 // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");
