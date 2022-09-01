@@ -52,6 +52,33 @@ struct HFData {
 
    void fillData(unsigned int numChannels, unsigned int numBins){
 
+       channels = numChannels;
+       bins = numBins;
+
+       // We alternatively fill bins that are like bin 0 and bin 1 of the
+       // ogifinal hf001 example.
+
+      for(std::size_t iBin = 0; iBin < numBins; ++iBin) {
+          if(iBin % 2 == 0) {
+             weights.push_back(122);
+             sig.push_back(20);
+             bkg1.push_back(100);
+             bkg2.push_back(0);
+             nomGammaVals.push_back(400);
+          } else {
+             weights.push_back(112);
+             sig.push_back(10);
+             bkg1.push_back(0);
+             bkg2.push_back(100);
+             nomGammaVals.push_back(100);
+          }
+
+          binBoundaries.push_back(iBin);
+          binVals.push_back(iBin + 0.5);
+      }
+      binBoundaries.push_back(numBins);
+
+
    }
 };
 
@@ -80,20 +107,22 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
       chan.SetStatErrorConfig(0.05, "Poisson");
 
       // set data
-      auto dataHist = new TH1F{"data_hist", "data_hist", 2, 1.0, 2.0};
-      dataHist->SetBinContent(1, 122);
-      dataHist->SetBinContent(2, 112);
-      HistFactory::Data data;
-      data.SetHisto(dataHist);
-      chan.SetData(data);
+      auto dataHist = new TH1F{"data_hist", "data_hist", data.bins, 0.0, data.bins};
+      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+         dataHist->SetBinContent(iBin + 1, data.weights[iBin]);
+      }
+      HistFactory::Data datachan;
+      datachan.SetHisto(dataHist);
+      chan.SetData(datachan);
 
       // Now, create some samples
 
       // Create the signal sample
       Sample signal("signal");
-      auto sigHist = new TH1F{"sig_hist", "sig_hist", 2, 1.0, 2.0};
-      sigHist->SetBinContent(1, 20);
-      sigHist->SetBinContent(2, 10);
+      auto sigHist = new TH1F{"sig_hist", "sig_hist", data.bins, 0.0, data.bins};
+      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+         sigHist->SetBinContent(iBin + 1, data.sig[iBin]);
+      }
       signal.SetHisto(sigHist);
       // signal.AddOverallSys( "syst1",  0.95, 1.05 );
       signal.AddNormFactor("SigXsecOverSM", 1, 0, 3);
@@ -101,13 +130,15 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // Background 1
       Sample background1("background1");
-      auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", 2, 1.0, 2.0};
-      bkg1Hist->SetBinContent(1, 100);
-      bkg1Hist->SetBinContent(2, 0);
+      auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", data.bins, 0.0, data.bins};
+      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+         bkg1Hist->SetBinContent(iBin + 1, data.bkg1[iBin]);
+      }
       background1.SetHisto(bkg1Hist);
-      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", 2, 1.0, 2.0};
-      bkg1UncertHist->SetBinContent(1, 0.05);
-      bkg1UncertHist->SetBinContent(2, 0.05);
+      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", data.bins, 0.0, data.bins};
+      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+         bkg1UncertHist->SetBinContent(iBin + 1, 0.05);
+      }
       background1.GetStatError().Activate();
       background1.GetStatError().SetUseHisto();
       background1.GetStatError().SetErrorHist(bkg1UncertHist);
@@ -116,9 +147,10 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // Background 2
       Sample background2("background2");
-      auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", 2, 1.0, 2.0};
-      bkg2Hist->SetBinContent(1, 0);
-      bkg2Hist->SetBinContent(2, 100);
+      auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", data.bins, 0.0, data.bins};
+      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+         bkg2Hist->SetBinContent(iBin + 1, data.bkg2[iBin]);
+      }
       background2.SetHisto(bkg2Hist);
       background2.ActivateStatError();
       // background2.AddOverallSys( "syst3", 0.95, 1.05  );
@@ -134,7 +166,7 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
 {
 
    // ---------- Constants ----------
-   ExRooRealVar X(ctx, "x", HFData::toString(data.binVals), 2);
+   ExRooRealVar X(ctx, "x", HFData::toString(data.binVals), data.bins);
    ExRooConst B2Eps(ctx, 1);
    ExRooConst B1Eps(ctx, 1);
    ExRooRealVar NomLumi(ctx, "nominalLumi", "1");
@@ -157,9 +189,9 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
    std::vector<ExRooReal*> constraints;
    constraints.push_back(&GaussLumi);
    std::string binBoundaries = HFData::toString(data.binBoundaries);
-   std::string sigVals = HFData::toString(data.binBoundaries);
-   std::string bkg1Vals = HFData::toString(data.binBoundaries);
-   std::string bkg2Vals = HFData::toString(data.binBoundaries);
+   std::string sigVals = HFData::toString(data.sig);
+   std::string bkg1Vals = HFData::toString(data.bkg1);
+   std::string bkg2Vals = HFData::toString(data.bkg2);
    for (int i = 0; i < data.channels; i++) {
      std::string ichan = std::to_string(i);
 
@@ -271,7 +303,7 @@ private:
    std::size_t _n = 0;
 };
 
-constexpr bool verbose = false;
+constexpr bool verbose = true;
 std::unordered_map<int,bool> nllDeclared;
 
 #ifdef BENCH
@@ -284,9 +316,10 @@ int main()
    using namespace RooFit;
 #ifdef BENCH
    int testChannels = state.range(1);
+   int testBins = 4;
 #else
    int testChannels = 50;
-   int testBins = 2;
+   int testBins = 4;
 #endif
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
@@ -307,7 +340,7 @@ int main()
 
    if (!nllDeclared[testChannels]) {
       gInterpreter->ProcessLine(
-         "#include \"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
+         "#include \"/home/rembserj/code/roofit-clad-work/include/RooSimClasses.h\"");
       gInterpreter->Declare(func.c_str());
 
       gInterpreter->ProcessLine("#include \"clad/Differentiator/Differentiator.h\"");
@@ -436,12 +469,12 @@ int main()
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-const auto nIter = 10;
+const auto nIter = 1;
 
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 100, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
 // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");
