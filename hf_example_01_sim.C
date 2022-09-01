@@ -29,7 +29,33 @@
 #include <string>
 #include <cmath>
 
-std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
+struct HFData {
+   unsigned int bins;
+   unsigned int channels;
+   std::vector<double> weights;
+   std::vector<double> binVals;
+   std::vector<double> sig;
+   std::vector<double> bkg1;
+   std::vector<double> bkg2;
+   std::vector<double> nomGammaVals;
+   std::vector<double> binBoundaries;
+
+   static std::string toString(const std::vector<double>& in) {
+     std::string vec = "{";
+     for (auto &it : in) {
+       vec += std::to_string(it) + ",";
+     }
+     vec.pop_back();
+     vec += "};";
+     return vec;
+   }
+
+   void fillData(unsigned int numChannels, unsigned int numBins){
+
+   }
+}
+
+std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 {
    using namespace RooStats;
    using namespace HistFactory;
@@ -47,7 +73,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
    meas.SetExportOnly(false);
    meas.SetBinHigh(2);
 
-   for (std::size_t iChannel = 0; iChannel < nChannels; ++iChannel) {
+   for (std::size_t iChannel = 0; iChannel < data.channels; ++iChannel) {
       // Create a channel
       Channel chan(("channel" + std::to_string(iChannel)).c_str());
 
@@ -104,11 +130,11 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(int nChannels)
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
 
-std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
+std::string generateNLLCode(contextManager &ctx, HFData& data)
 {
 
    // ---------- Constants ----------
-   ExRooRealVar X(ctx, "x", "{1.25, 1.75}", 2);
+   ExRooRealVar X(ctx, "x", HFData::toString(data.binVals), 2);
    ExRooConst B2Eps(ctx, 1);
    ExRooConst B1Eps(ctx, 1);
    ExRooRealVar NomLumi(ctx, "nominalLumi", "1");
@@ -130,28 +156,47 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
    std::vector<ExRooReal*> nll;
    std::vector<ExRooReal*> constraints;
    constraints.push_back(&GaussLumi);
-   for (int i = 0; i < numChannels; i++) {
+   std::string binBoundaries = HFData::toString(data.binBoundaries);
+   std::string sigVals = HFData::toString(data.binBoundaries);
+   std::string bkg1Vals = HFData::toString(data.binBoundaries);
+   std::string bkg2Vals = HFData::toString(data.binBoundaries);
+   for (int i = 0; i < data.channels; i++) {
      std::string ichan = std::to_string(i);
 
-     // Gammas
-     int igamma1 = channelVars.size();
-     channelVars.push_back(new ExRooRealVar(ctx, "gamma_stat_channel" + ichan + "_bin_0")); // Input
-     int inomgamma1 = channelVars.size();
-     channelVars.push_back(new ExRooRealVar(ctx, "nomGamma" + ichan + "B1", "400"));
-     int igamma2 = channelVars.size();
-     channelVars.push_back(new ExRooRealVar(ctx, "gamma_stat_channel" + ichan + "_bin_1")); // Input
-     int inomgamma2 = channelVars.size();
-     channelVars.push_back(new ExRooRealVar(ctx, "nomGamma" + ichan + "B2", "100"));
+     // ---------- bin Dependent Vars ----------
+     std::vector<ExRooReal *> gammas;
+     for (int j = 0; j < data.bins; j++) {
+       std::string ibin = std::to_string(j);
+
+       // Gammas
+       channelVars.push_back(new ExRooRealVar(
+           ctx, "gamma_stat_channel" + ichan + "_bin_" + ibin)); // Input
+       gammas.push_back(channelVars.back());
+       int inomgamma = channelVars.size();
+       channelVars.push_back(
+           new ExRooRealVar(ctx, "nom_gamma_chan" + ichan + "_bin_" + ibin,
+                            std::to_string(data.nomGammaVals[j])));
+
+       // Constraints
+       channelVars.push_back(new ExRooProduct(
+           ctx, {channelVars[inomgamma], channelVars[gammas.back()]}));
+       channelVars.push_back(
+           new ExRooPoisson(ctx, channelVars[inomgamma], channelVars.back()));
+       constraints.push_back(channelVars.back());
+       // channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys,
+       // &RandConst2)); 
+       //constraints.push_back(channelVars.back());
+     }
 
      // HistFunc components
      int isig = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "sig" + ichan, "{20, 10}", "{1, 1.5, 2}"));
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "sig" + ichan, sigVals, binBoundaries));
      int ibgk1 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk1" + ichan, "{100, 0}", "{1, 1.5, 2}"));
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk1" + ichan, bkg1Vals, binBoundaries));
      int ibgk2 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk2" + ichan, "{0, 100}", "{1, 1.5, 2}"));
+     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk2" + ichan, bkg2Vals, binBoundaries));
      int iparamHist = channelVars.size();
-     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, {channelVars[igamma1], channelVars[igamma2]}, "histVals" + ichan));
+     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, gammas, "histVals" + ichan));
      int iscale1 = channelVars.size();
      channelVars.push_back(new ExRooProduct(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi}));
      int iscale2 = channelVars.size();
@@ -167,20 +212,10 @@ std::string generateNLLCode(contextManager &ctx, unsigned int numChannels)
          {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
          {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
      channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
-     channelVars.push_back(new ExRooNll2(ctx, &X, "2", channelVars.back(), {122, 112}, "nllSum" + ichan, "weights" + ichan));
+     channelVars.push_back(new ExRooNll2(ctx, &X, std::to_string(data.bins), channelVars.back(), data.weights, "nllSum" + ichan, "weights" + ichan));
 
      // NLL
      nll.push_back(channelVars.back());
-
-     // Constraints
-     channelVars.push_back(new ExRooProduct(ctx, {channelVars[inomgamma1], channelVars[igamma1]}));
-     channelVars.push_back(new ExRooPoisson(ctx, channelVars[inomgamma1], channelVars.back()));
-     constraints.push_back(channelVars.back());
-     channelVars.push_back(new ExRooProduct(ctx, {channelVars[inomgamma2], channelVars[igamma2]}));
-     channelVars.push_back(new ExRooPoisson(ctx, channelVars[inomgamma2], channelVars.back()));
-     constraints.push_back(channelVars.back());
-   //   channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys, &RandConst2));
-   //   constraints.push_back(channelVars.back());
    }
 
    // Constraint sum
