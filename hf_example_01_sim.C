@@ -53,7 +53,7 @@ struct HFData {
    void fillData(unsigned int numChannels, unsigned int numBins){
 
    }
-}
+};
 
 std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 {
@@ -179,7 +179,7 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
 
        // Constraints
        channelVars.push_back(new ExRooProduct(
-           ctx, {channelVars[inomgamma], channelVars[gammas.back()]}));
+           ctx, {channelVars[inomgamma], gammas.back()}));
        channelVars.push_back(
            new ExRooPoisson(ctx, channelVars[inomgamma], channelVars.back()));
        constraints.push_back(channelVars.back());
@@ -280,13 +280,13 @@ static void hf_example_01_sim(benchmark::State &state)
 int main()
 #endif
 {
-
    using namespace RooStats;
    using namespace RooFit;
 #ifdef BENCH
    int testChannels = state.range(1);
 #else
    int testChannels = 50;
+   int testBins = 2;
 #endif
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
@@ -296,9 +296,14 @@ int main()
    gInterpreter->Declare("#pragma cling optimize(2)");
 
    contextManager ctx("nll" + std::to_string(testChannels));
+   HFData hf_data;
+
+   // Fill HF data 
+   hf_data.fillData(testChannels, testBins);
+
    std::string funcName = ctx.funcName;
    std::string gradName = funcName + "_grad";
-   std::string func = generateNLLCode(ctx, testChannels);
+   std::string func = generateNLLCode(ctx, hf_data);
 
    if (!nllDeclared[testChannels]) {
       gInterpreter->ProcessLine(
@@ -318,7 +323,7 @@ int main()
    auto funcObj = (double (*)(double *))gInterpreter->ProcessLine(
        (funcName + ";").c_str());
 
-   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(testChannels);
+   std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(hf_data);
 
    auto *mc = static_cast<ModelConfig *>(w->obj("ModelConfig"));
 
