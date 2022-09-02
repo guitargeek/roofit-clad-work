@@ -30,8 +30,8 @@
 #include <cmath>
 
 struct HFData {
-   unsigned int bins;
-   unsigned int channels;
+   int bins;
+   int channels;
    std::vector<double> weights;
    std::vector<double> binVals;
    std::vector<double> sig;
@@ -107,7 +107,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
       chan.SetStatErrorConfig(0.05, "Poisson");
 
       // set data
-      auto dataHist = new TH1F{"data_hist", "data_hist", data.bins, 0.0, data.bins};
+      auto dataHist = new TH1F{"data_hist", "data_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
       for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          dataHist->SetBinContent(iBin + 1, data.weights[iBin]);
       }
@@ -119,7 +119,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // Create the signal sample
       Sample signal("signal");
-      auto sigHist = new TH1F{"sig_hist", "sig_hist", data.bins, 0.0, data.bins};
+      auto sigHist = new TH1F{"sig_hist", "sig_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
       for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          sigHist->SetBinContent(iBin + 1, data.sig[iBin]);
       }
@@ -130,12 +130,12 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // Background 1
       Sample background1("background1");
-      auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", data.bins, 0.0, data.bins};
+      auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
       for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg1Hist->SetBinContent(iBin + 1, data.bkg1[iBin]);
       }
       background1.SetHisto(bkg1Hist);
-      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", data.bins, 0.0, data.bins};
+      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", data.bins, 0.0, static_cast<Double_t>(data.bins)};
       for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg1UncertHist->SetBinContent(iBin + 1, 0.05);
       }
@@ -147,7 +147,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // Background 2
       Sample background2("background2");
-      auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", data.bins, 0.0, data.bins};
+      auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
       for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg2Hist->SetBinContent(iBin + 1, data.bkg2[iBin]);
       }
@@ -340,7 +340,7 @@ int main()
 
    if (!nllDeclared[testChannels]) {
       gInterpreter->ProcessLine(
-         "#include \"/home/rembserj/code/roofit-clad-work/include/RooSimClasses.h\"");
+         "#include \"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
       gInterpreter->Declare(func.c_str());
 
       gInterpreter->ProcessLine("#include \"clad/Differentiator/Differentiator.h\"");
