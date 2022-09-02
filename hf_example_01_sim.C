@@ -46,7 +46,7 @@ struct HFData {
        vec += std::to_string(it) + ",";
      }
      vec.pop_back();
-     vec += "};";
+     vec += "}";
      return vec;
    }
 
@@ -222,11 +222,11 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
 
      // HistFunc components
      int isig = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "sig" + ichan, sigVals, binBoundaries));
+     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "sig" + ichan, sigVals, binBoundaries));
      int ibgk1 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk1" + ichan, bkg1Vals, binBoundaries));
+     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk1" + ichan, bkg1Vals, binBoundaries));
      int ibgk2 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, &X, "bgk2" + ichan, bkg2Vals, binBoundaries));
+     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk2" + ichan, bkg2Vals, binBoundaries));
      int iparamHist = channelVars.size();
      channelVars.push_back(new ExRooParamHistFunc(ctx, &X, gammas, "histVals" + ichan));
      int iscale1 = channelVars.size();
@@ -316,10 +316,10 @@ int main()
    using namespace RooFit;
 #ifdef BENCH
    int testChannels = state.range(1);
-   int testBins = 4;
+   int testBins = 10;
 #else
    int testChannels = 50;
-   int testBins = 4;
+   int testBins = 10;
 #endif
 
    gROOT->ProcessLine("gErrorIgnoreLevel = 2001;");
@@ -471,10 +471,10 @@ auto unit = benchmark::kMicrosecond;
 
 const auto nIter = 1;
 
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 1, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
 // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");

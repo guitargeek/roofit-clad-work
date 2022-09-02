@@ -153,9 +153,9 @@ class ExRooHistFunc : public ExRooReal {
 
 public:
   ~ExRooHistFunc() { _ObjCount--; }
-  ExRooHistFunc(contextManager &ctxMgr, ExRooRealVar *in, std::string shapeName,
+  ExRooHistFunc(contextManager &ctxMgr, std::size_t nBinsIn, ExRooRealVar *in, std::string shapeName,
                 std::string val_init, std::string bin_init = "")
-      : ExRooReal(ctxMgr, {in}), x(in), name(shapeName), 
+      : ExRooReal(ctxMgr, {in}), nBins{nBinsIn}, x(in), name(shapeName), 
         initalizer(val_init), binInit(bin_init) {
     _ObjCount++;
     mycount = _ObjCount;
