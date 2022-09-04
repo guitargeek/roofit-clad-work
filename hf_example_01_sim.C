@@ -303,7 +303,7 @@ private:
    std::size_t _n = 0;
 };
 
-constexpr bool verbose = true;
+constexpr bool verbose = false;
 std::unordered_map<int,bool> nllDeclared;
 
 #ifdef BENCH
@@ -316,9 +316,9 @@ int main()
    using namespace RooFit;
 #ifdef BENCH
    int testChannels = state.range(1);
-   int testBins = 10;
+   int testBins = state.range(2);
 #else
-   int testChannels = 50;
+   int testChannels = 100;
    int testBins = 10;
 #endif
 
@@ -469,12 +469,12 @@ int main()
 #ifdef BENCH
 auto unit = benchmark::kMicrosecond;
 
-const auto nIter = 1;
+const auto nIter = 10;
 
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("RooFit_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("BatchMode_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(3, 3, /*step=*/10)}})->Iterations(nIter)->Name("CodeGen_Clad");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("CodeGen_Clad");
 
 // For profiling
 // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");
