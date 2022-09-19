@@ -29,7 +29,7 @@ public:
 
   void addInputParam(std::string name) { inputParams.push_back(name); }
 
-  std::string getParamList() { 
+  std::string getParamList() {
     std::string params = "";
     for(auto& it : inputParams) {
       params += "double " + it + ",";
@@ -44,7 +44,7 @@ public:
 class ExRooReal {
   std::vector<ExRooReal*> child;
   std::vector<std::string> preFuncDecls;
-  
+
 protected:
   contextManager &ctxM;
   std::string result;
@@ -54,9 +54,9 @@ public:
   ExRooReal() = delete;
   ExRooReal(contextManager &ctx, std::vector<ExRooReal*> ch = {}) : child(ch), ctxM(ctx) {}
   virtual ~ExRooReal() = default;
-  
+
   void setChildren(std::vector<ExRooReal *> ch) { child = ch;  }
-  
+
   std::string getCode() {
     std::string code = "", global = "";
     getCodeRecur(this, code, global);
@@ -155,7 +155,7 @@ public:
   ~ExRooHistFunc() { _ObjCount--; }
   ExRooHistFunc(contextManager &ctxMgr, std::size_t nBinsIn, ExRooRealVar *in, std::string shapeName,
                 std::string val_init, std::string bin_init = "")
-      : ExRooReal(ctxMgr, {in}), nBins{nBinsIn}, x(in), name(shapeName), 
+      : ExRooReal(ctxMgr, {in}), nBins{nBinsIn}, x(in), name(shapeName),
         initalizer(val_init), binInit(bin_init) {
     _ObjCount++;
     mycount = _ObjCount;
@@ -310,7 +310,7 @@ public:
   ExRooGaussian(contextManager &ctx, ExRooReal *in, ExRooReal *mean,
                 ExRooReal *sig)
       : ExRooReal(ctx, {in, mean, sig}), _x(in), _mu(mean), _sigma(sig) {}
-      
+
   std::string translate(std::string &globalScope,
                         std::vector<std::string> &preFuncDecls) override {
     result = "ExRooGaussian::gauss(" + _x->getResult() + " ," + _mu->getResult() +
@@ -405,7 +405,7 @@ class KSum {
   double t = 0;
 
 public:
-  double accumulate(double sum, double a) { 
+  double accumulate(double sum, double a) {
     y = - a - c;
     t = sum + y;
     c = (t - sum) - y;
@@ -494,4 +494,27 @@ public:
     return code;
   }
 };
+
+class ExRooFlexibleInterpVar : public ExRooReal {
+  ExRooReal *alpha;
+  std::string high, low;
+
+public:
+  ExRooFlexibleInterpVar(contextManager &ctx, ExRooReal *in, std::string min, std::string max)
+      : ExRooReal(ctx, {in}), alpha(in), high(max), low(min) {}
+
+  std::string translate(std::string &globalScope,
+                        std::vector<std::string> &preFuncDecls) override {
+    result = "ExRooFlexibleInterpVar::getInterpAlpha(" + alpha->getResult() + "," + high + "," + low + ")";
+    return "";
+  }
+
+  static double getInterpAlpha(double alpha, double max, double min) {
+    if (alpha > 0)
+      return 1 - (1 - max) * alpha;
+    else
+      return 1 - (1 - min) * std::abs(alpha);
+  }
+};
+
 #endif
