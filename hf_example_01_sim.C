@@ -29,6 +29,22 @@
 #include <string>
 #include <cmath>
 
+double getMaxDeviation(ROOT::Minuit2::MnUserParameters const &postParams,
+                       ROOT::Minuit2::MnUserParameters const &refPostFitParams)
+{
+   const std::size_t nParams = refPostFitParams.Parameters().size();
+   double out = 0.0;
+   for (std::size_t iParam = 0; iParam < nParams; ++iParam) {
+      if (std::string(postParams.GetName(iParam)) != refPostFitParams.GetName(iParam)) {
+         throw std::runtime_error("Parameter names don't match in getMaxDeviation!");
+      }
+      double stdev =
+         std::abs(postParams.Value(iParam) - refPostFitParams.Value(iParam)) / refPostFitParams.Error(iParam);
+      out = std::max(stdev, out);
+   }
+   return out;
+}
+
 struct HFData {
    int bins;
    int channels;
@@ -40,49 +56,49 @@ struct HFData {
    std::vector<double> nomGammaVals;
    std::vector<double> binBoundaries;
 
-   static std::string toString(const std::vector<double>& in) {
-     std::string vec = "{";
-     for (auto &it : in) {
-       vec += std::to_string(it) + ",";
-     }
-     vec.pop_back();
-     vec += "}";
-     return vec;
+   static std::string toString(const std::vector<double> &in)
+   {
+      std::string vec = "{";
+      for (auto &it : in) {
+         vec += std::to_string(it) + ",";
+      }
+      vec.pop_back();
+      vec += "}";
+      return vec;
    }
 
-   void fillData(unsigned int numChannels, unsigned int numBins){
+   void fillData(unsigned int numChannels, unsigned int numBins)
+   {
 
-       channels = numChannels;
-       bins = numBins;
+      channels = numChannels;
+      bins = numBins;
 
-       // We alternatively fill bins that are like bin 0 and bin 1 of the
-       // ogifinal hf001 example.
+      // We alternatively fill bins that are like bin 0 and bin 1 of the
+      // ogifinal hf001 example.
 
-      for(std::size_t iBin = 0; iBin < numBins; ++iBin) {
-          if(iBin % 2 == 0) {
-             weights.push_back(122);
-             sig.push_back(20);
-             bkg1.push_back(100);
-             bkg2.push_back(0);
-             nomGammaVals.push_back(400);
-          } else {
-             weights.push_back(112);
-             sig.push_back(10);
-             bkg1.push_back(0);
-             bkg2.push_back(100);
-             nomGammaVals.push_back(100);
-          }
+      for (std::size_t iBin = 0; iBin < numBins; ++iBin) {
+         if (iBin % 2 == 0) {
+            weights.push_back(122);
+            sig.push_back(20);
+            bkg1.push_back(100);
+            bkg2.push_back(0);
+            nomGammaVals.push_back(400);
+         } else {
+            weights.push_back(112);
+            sig.push_back(10);
+            bkg1.push_back(0);
+            bkg2.push_back(100);
+            nomGammaVals.push_back(100);
+         }
 
-          binBoundaries.push_back(iBin);
-          binVals.push_back(iBin + 0.5);
+         binBoundaries.push_back(iBin);
+         binVals.push_back(iBin + 0.5);
       }
       binBoundaries.push_back(numBins);
-
-
    }
 };
 
-std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
+std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData &data)
 {
    using namespace RooStats;
    using namespace HistFactory;
@@ -108,7 +124,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
 
       // set data
       auto dataHist = new TH1F{"data_hist", "data_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
-      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+      for (std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          dataHist->SetBinContent(iBin + 1, data.weights[iBin]);
       }
       HistFactory::Data datachan;
@@ -120,7 +136,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
       // Create the signal sample
       Sample signal("signal");
       auto sigHist = new TH1F{"sig_hist", "sig_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
-      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+      for (std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          sigHist->SetBinContent(iBin + 1, data.sig[iBin]);
       }
       signal.SetHisto(sigHist);
@@ -131,12 +147,13 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
       // Background 1
       Sample background1("background1");
       auto bkg1Hist = new TH1F{"bkg1_hist", "bkg1_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
-      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+      for (std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg1Hist->SetBinContent(iBin + 1, data.bkg1[iBin]);
       }
       background1.SetHisto(bkg1Hist);
-      auto bkg1UncertHist = new TH1F{"background1_statUncert", "background1_statUncert", data.bins, 0.0, static_cast<Double_t>(data.bins)};
-      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+      auto bkg1UncertHist =
+         new TH1F{"background1_statUncert", "background1_statUncert", data.bins, 0.0, static_cast<Double_t>(data.bins)};
+      for (std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg1UncertHist->SetBinContent(iBin + 1, 0.05);
       }
       background1.GetStatError().Activate();
@@ -148,7 +165,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
       // Background 2
       Sample background2("background2");
       auto bkg2Hist = new TH1F{"bkg2_hist", "bkg2_hist", data.bins, 0.0, static_cast<Double_t>(data.bins)};
-      for(std::size_t iBin = 0; iBin < data.bins; ++iBin) {
+      for (std::size_t iBin = 0; iBin < data.bins; ++iBin) {
          bkg2Hist->SetBinContent(iBin + 1, data.bkg2[iBin]);
       }
       background2.SetHisto(bkg2Hist);
@@ -162,7 +179,7 @@ std::unique_ptr<RooWorkspace> makeHistFactoryWorkspace(HFData& data)
    return std::unique_ptr<RooWorkspace>{MakeModelAndMeasurementFast(meas)};
 }
 
-std::string generateNLLCode(contextManager &ctx, HFData& data)
+std::string generateNLLCode(contextManager &ctx, HFData &data)
 {
 
    // ---------- Constants ----------
@@ -176,78 +193,74 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
    // ExRooRealVar NomAlphaSys(ctx, "nomAlphaSys", "0");
 
    // ---------- Channel Independent Vars ----------
-   ExRooRealVar Lumi(ctx, "Lumi");                         // Input
-   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM");           // Input
+   ExRooRealVar Lumi(ctx, "Lumi");               // Input
+   ExRooRealVar SigXOverM(ctx, "SigXsecOverSM"); // Input
    // Channel weight
    ExRooRealVar ChannelWeight(ctx, "cw", "1");
    ExRooRealVar ChannelWeight2(ctx, "cw2", "1");
    ExRooGaussian GaussLumi(ctx, &Lumi, &NomLumi, &RandConst);
 
    // ---------- Channel Dependent Vars ----------
-   std::vector<ExRooReal*> channelVars;
-   std::vector<ExRooReal*> nll;
-   std::vector<ExRooReal*> constraints;
+   std::vector<ExRooReal *> channelVars;
+   std::vector<ExRooReal *> nll;
+   std::vector<ExRooReal *> constraints;
    constraints.push_back(&GaussLumi);
    std::string binBoundaries = HFData::toString(data.binBoundaries);
    std::string sigVals = HFData::toString(data.sig);
    std::string bkg1Vals = HFData::toString(data.bkg1);
    std::string bkg2Vals = HFData::toString(data.bkg2);
    for (int i = 0; i < data.channels; i++) {
-     std::string ichan = std::to_string(i);
+      std::string ichan = std::to_string(i);
 
-     // ---------- bin Dependent Vars ----------
-     std::vector<ExRooReal *> gammas;
-     for (int j = 0; j < data.bins; j++) {
-       std::string ibin = std::to_string(j);
+      // ---------- bin Dependent Vars ----------
+      std::vector<ExRooReal *> gammas;
+      for (int j = 0; j < data.bins; j++) {
+         std::string ibin = std::to_string(j);
 
-       // Gammas
-       channelVars.push_back(new ExRooRealVar(
-           ctx, "gamma_stat_channel" + ichan + "_bin_" + ibin)); // Input
-       gammas.push_back(channelVars.back());
-       int inomgamma = channelVars.size();
-       channelVars.push_back(
-           new ExRooRealVar(ctx, "nom_gamma_chan" + ichan + "_bin_" + ibin,
-                            std::to_string(data.nomGammaVals[j])));
+         // Gammas
+         channelVars.push_back(new ExRooRealVar(ctx, "gamma_stat_channel" + ichan + "_bin_" + ibin)); // Input
+         gammas.push_back(channelVars.back());
+         int inomgamma = channelVars.size();
+         channelVars.push_back(
+            new ExRooRealVar(ctx, "nom_gamma_chan" + ichan + "_bin_" + ibin, std::to_string(data.nomGammaVals[j])));
 
-       // Constraints
-       channelVars.push_back(new ExRooProduct(
-           ctx, {channelVars[inomgamma], gammas.back()}));
-       channelVars.push_back(
-           new ExRooPoisson(ctx, channelVars[inomgamma], channelVars.back()));
-       constraints.push_back(channelVars.back());
-       // channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys,
-       // &RandConst2)); 
-       //constraints.push_back(channelVars.back());
-     }
+         // Constraints
+         channelVars.push_back(new ExRooProduct(ctx, {channelVars[inomgamma], gammas.back()}));
+         channelVars.push_back(new ExRooPoisson(ctx, channelVars[inomgamma], channelVars.back()));
+         constraints.push_back(channelVars.back());
+         // channelVars.push_back(new ExRooGaussian(ctx, &AlphaSys, &NomAlphaSys,
+         // &RandConst2));
+         // constraints.push_back(channelVars.back());
+      }
 
-     // HistFunc components
-     int isig = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "sig" + ichan, sigVals, binBoundaries));
-     int ibgk1 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk1" + ichan, bkg1Vals, binBoundaries));
-     int ibgk2 = channelVars.size();
-     channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk2" + ichan, bkg2Vals, binBoundaries));
-     int iparamHist = channelVars.size();
-     channelVars.push_back(new ExRooParamHistFunc(ctx, &X, gammas, "histVals" + ichan));
-     int iscale1 = channelVars.size();
-     channelVars.push_back(new ExRooProduct(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi}));
-     int iscale2 = channelVars.size();
-     channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B1Eps}));
-     int iscale3 = channelVars.size();
-     channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B2Eps}));
-     int ibkgShape1 = channelVars.size();
-     channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk1], channelVars[iparamHist]}));
-     int ibkgShape2 = channelVars.size();
-     channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk2], channelVars[iparamHist]}));
-     channelVars.push_back(new ExRooRealSum( 
-         ctx, "mu" + ichan,
-         {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
-         {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
-     channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
-     channelVars.push_back(new ExRooNll2(ctx, &X, std::to_string(data.bins), channelVars.back(), data.weights, "nllSum" + ichan, "weights" + ichan));
+      // HistFunc components
+      int isig = channelVars.size();
+      channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "sig" + ichan, sigVals, binBoundaries));
+      int ibgk1 = channelVars.size();
+      channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk1" + ichan, bkg1Vals, binBoundaries));
+      int ibgk2 = channelVars.size();
+      channelVars.push_back(new ExRooHistFunc(ctx, data.bins, &X, "bgk2" + ichan, bkg2Vals, binBoundaries));
+      int iparamHist = channelVars.size();
+      channelVars.push_back(new ExRooParamHistFunc(ctx, &X, gammas, "histVals" + ichan));
+      int iscale1 = channelVars.size();
+      channelVars.push_back(new ExRooProduct(ctx, {/* &AlphaSys, */ &SigXOverM, &Lumi}));
+      int iscale2 = channelVars.size();
+      channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B1Eps}));
+      int iscale3 = channelVars.size();
+      channelVars.push_back(new ExRooProduct(ctx, {&Lumi, &B2Eps}));
+      int ibkgShape1 = channelVars.size();
+      channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk1], channelVars[iparamHist]}));
+      int ibkgShape2 = channelVars.size();
+      channelVars.push_back(new ExRooProduct(ctx, {channelVars[ibgk2], channelVars[iparamHist]}));
+      channelVars.push_back(new ExRooRealSum(ctx, "mu" + ichan,
+                                             {channelVars[isig], channelVars[ibkgShape1], channelVars[ibkgShape2]},
+                                             {channelVars[iscale1], channelVars[iscale2], channelVars[iscale3]}));
+      channelVars.push_back(new ExRooProduct(ctx, {channelVars.back()}));
+      channelVars.push_back(new ExRooNll2(ctx, &X, std::to_string(data.bins), channelVars.back(), data.weights,
+                                          "nllSum" + ichan, "weights" + ichan));
 
-     // NLL
-     nll.push_back(channelVars.back());
+      // NLL
+      nll.push_back(channelVars.back());
    }
 
    // Constraint sum
@@ -261,8 +274,8 @@ std::string generateNLLCode(contextManager &ctx, HFData& data)
    std::string retVal = Root.getResult();
 
    // ---------- Cleanup ----------
-   for(auto it : channelVars)
-     delete it;
+   for (auto it : channelVars)
+      delete it;
 
    return "double " + ctx.funcName + "(double* in) { \n" + code + " return " + retVal + ";\n}\n";
 }
@@ -304,7 +317,7 @@ private:
 };
 
 constexpr bool verbose = false;
-std::unordered_map<int,bool> nllDeclared;
+std::unordered_map<int, bool> nllDeclared;
 
 #ifdef BENCH
 static void hf_example_01_sim(benchmark::State &state)
@@ -316,7 +329,7 @@ int main()
    using namespace RooFit;
 #ifdef BENCH
    int testChannels = state.range(1);
-   int testBins = state.range(2);
+   int testBins = state.range(3);
 #else
    int testChannels = 100;
    int testBins = 10;
@@ -331,7 +344,7 @@ int main()
    contextManager ctx("nll" + std::to_string(testChannels));
    HFData hf_data;
 
-   // Fill HF data 
+   // Fill HF data
    hf_data.fillData(testChannels, testBins);
 
    std::string funcName = ctx.funcName;
@@ -339,8 +352,7 @@ int main()
    std::string func = generateNLLCode(ctx, hf_data);
 
    if (!nllDeclared[testChannels]) {
-      gInterpreter->ProcessLine(
-         "#include \"/home/grimmyshini/ROOT/examples/roofit-clad-work/include/RooSimClasses.h\"");
+      gInterpreter->ProcessLine("#include \"./include/RooSimClasses.h\"");
       gInterpreter->Declare(func.c_str());
 
       gInterpreter->ProcessLine("#include \"clad/Differentiator/Differentiator.h\"");
@@ -350,11 +362,8 @@ int main()
    }
 
    // get the grad function pointer.
-   auto gradObj =
-       (void (*)(double *, clad::array_ref<double>))gInterpreter->ProcessLine(
-           (gradName + ";").c_str());
-   auto funcObj = (double (*)(double *))gInterpreter->ProcessLine(
-       (funcName + ";").c_str());
+   auto gradObj = (void (*)(double *, clad::array_ref<double>))gInterpreter->ProcessLine((gradName + ";").c_str());
+   auto funcObj = (double (*)(double *))gInterpreter->ProcessLine((funcName + ";").c_str());
 
    std::unique_ptr<RooWorkspace> w = makeHistFactoryWorkspace(hf_data);
 
@@ -455,14 +464,28 @@ int main()
    }
 
 #else
-   auto minimum = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
-   std::cout << reorderFitParams(minimum.UserParameters()) << std::endl;
 
-   auto minimum2 = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
-   std::cout << minimum2.UserParameters() << std::endl;   
+   using VMM = ROOT::Minuit2::VariableMetricMinimizer;
+   using ROOT::Minuit2::FunctionMinimum;
+   using ROOT::Minuit2::MnUserParameters;
 
-   auto minimum3 = ROOT::Minuit2::VariableMetricMinimizer{}.Minimize(minuitGradFunc, mnParamsCodeGen, mnStrategy);
-   std::cout << minimum3.UserParameters() << std::endl;
+   FunctionMinimum minimum0 = VMM{}.Minimize(minuitRooFunc, mnParamsRooFit, mnStrategy);
+   FunctionMinimum minimum1 = VMM{}.Minimize(minuitRooFuncBatchMode, mnParamsRooFit, mnStrategy);
+   FunctionMinimum minimum2 = VMM{}.Minimize(minuitFunc, mnParamsCodeGen, mnStrategy);
+   FunctionMinimum minimum3 = VMM{}.Minimize(minuitGradFunc, mnParamsCodeGen, mnStrategy);
+
+   MnUserParameters postParams0 = reorderFitParams(minimum0.UserParameters());
+   MnUserParameters postParams1 = reorderFitParams(minimum1.UserParameters());
+   MnUserParameters postParams2 = minimum2.UserParameters();
+   MnUserParameters postParams3 = minimum3.UserParameters();
+
+   std::cout << "Maximum deviation from the reference result over reference uncertainty in percent:"
+             << "\n";
+   std::cout << " - RooFit Numeric (ref): " << (100 * getMaxDeviation(postParams0, postParams0)) << " %\n";
+   std::cout << " - BatchMode Numeric   : " << (100 * getMaxDeviation(postParams1, postParams0)) << " %\n";
+   std::cout << " - CodeGen Numeric     : " << (100 * getMaxDeviation(postParams2, postParams0)) << " %\n";
+   std::cout << " - CodeGen Clad        : " << (100 * getMaxDeviation(postParams3, postParams0)) << " %\n";
+
 #endif
 }
 
@@ -471,10 +494,26 @@ auto unit = benchmark::kMicrosecond;
 
 const auto nIter = 10;
 
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{0},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("RooFit_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{1},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("BatchMode_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{2},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("CodeGen_Numeric");
-BENCHMARK(hf_example_01_sim)->Unit(unit)->ArgsProduct({{{3},benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})->Iterations(nIter)->Name("CodeGen_Clad");
+BENCHMARK(hf_example_01_sim)
+   ->Unit(unit)
+   ->ArgsProduct({{{0}, benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})
+   ->Iterations(nIter)
+   ->Name("RooFit_Numeric");
+BENCHMARK(hf_example_01_sim)
+   ->Unit(unit)
+   ->ArgsProduct({{{1}, benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})
+   ->Iterations(nIter)
+   ->Name("BatchMode_Numeric");
+BENCHMARK(hf_example_01_sim)
+   ->Unit(unit)
+   ->ArgsProduct({{{2}, benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})
+   ->Iterations(nIter)
+   ->Name("CodeGen_Numeric");
+BENCHMARK(hf_example_01_sim)
+   ->Unit(unit)
+   ->ArgsProduct({{{3}, benchmark::CreateDenseRange(1, 150, /*step=*/10), {10}}})
+   ->Iterations(nIter)
+   ->Name("CodeGen_Clad");
 
 // For profiling
 // BENCHMARK(hf_example_01_sim)->Unit(unit)->Arg(3)->Iterations(1000)->Name("CodeGen_Cald");
